@@ -11,7 +11,7 @@
     CI                = "false"
     # ⚠️ REPLACE with your actual Render URL after deploying the backend
     # Example: 
-    REACT_APP_API_URL = "https://skillup-academy-r2ge.onrender.com/"
+    REACT_APP_API_URL = "https://skillup-academy-r2ge.onrender.com"
 
 # React Router — serve index.html for all page routes
 [[redirects]]
