@@ -1,0 +1,21 @@
+.teachers-page { min-height: 100vh; background: var(--white); padding-bottom: 100px; }
+.teachers-body { padding-top: 56px; }
+.teachers-full-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 24px; }
+.teacher-full-card { background: var(--white); border: 2px solid var(--gray-200); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.3s; }
+.teacher-full-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--blue-light); }
+.tfc-photo-wrap { position: relative; background: linear-gradient(135deg, var(--navy-dark), var(--blue-bright)); padding: 36px; display: flex; justify-content: center; overflow: hidden; }
+.tfc-photo { width: 120px; height: 120px; border-radius: 50%; border: 5px solid rgba(255,255,255,0.2); position: relative; z-index: 1; transition: transform 0.3s; }
+.tfc-hover-overlay { position: absolute; inset: 0; background: rgba(37,99,235,0.88); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; font-size: 15px; font-weight: 600; color: var(--white); }
+.teacher-full-card:hover .tfc-hover-overlay { opacity: 1; }
+.teacher-full-card:hover .tfc-photo { transform: scale(0.92); }
+.tfc-body { padding: 24px; }
+.tfc-body h3 { font-size: 19px; color: var(--navy-dark); margin-bottom: 3px; }
+.tfc-subject { font-size: 13px; font-weight: 600; color: var(--orange); margin-bottom: 10px; }
+.tfc-badges { margin-bottom: 10px; }
+.tfc-badge { font-size: 12px; padding: 3px 10px; border-radius: 100px; font-weight: 500; }
+.tfc-badge.exp { background: var(--orange-pale); color: var(--orange); }
+.tfc-bio { font-size: 13px; color: var(--gray-500); line-height: 1.6; margin-bottom: 14px; }
+.tfc-certs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { background: var(--blue-pale); color: var(--blue-bright); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+.tag-more { background: var(--gray-100); color: var(--gray-500); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+@media (max-width: 600px) { .teachers-full-grid { grid-template-columns: 1fr; } }

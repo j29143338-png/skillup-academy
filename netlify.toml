@@ -1,0 +1,32 @@
+# SkillUp Academy — netlify.toml
+# Frontend-only deployment. Backend now runs separately on Render.
+
+[build]
+  base    = "frontend"
+  command = "npm install && npm run build"
+  publish  = "build"
+
+  [build.environment]
+    NODE_VERSION      = "18"
+    CI                = "false"
+    # ⚠️ REPLACE with your actual Render URL after deploying the backend
+    # Example: https://skillup-academy-api.onrender.com
+    REACT_APP_API_URL = "https://skillup-academy-api.onrender.com"
+
+# React Router — serve index.html for all page routes
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

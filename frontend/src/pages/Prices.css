@@ -1,0 +1,44 @@
+.prices-page { min-height: 100vh; background: var(--white); padding-bottom: 100px; }
+.prices-body { padding-top: 48px; }
+
+.format-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 40px; }
+.format-legend-card { display: flex; align-items: center; gap: 14px; background: var(--white); border: 2px solid var(--gray-200); border-radius: var(--radius); padding: 18px 22px; flex: 1; min-width: 200px; position: relative; transition: all 0.2s; }
+.format-legend-card.highlight { border-color: var(--blue-bright); background: var(--blue-pale); }
+.fl-icon { font-size: 28px; }
+.format-legend-card strong { display: block; font-size: 15px; font-weight: 700; color: var(--navy-dark); margin-bottom: 2px; }
+.format-legend-card span { font-size: 13px; color: var(--gray-500); }
+.popular-pill { position: absolute; top: -10px; right: 14px; background: var(--blue-bright); color: var(--white); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 10px; border-radius: 100px; }
+
+.prices-table-wrap { background: var(--white); border: 2px solid var(--gray-200); border-radius: var(--radius); overflow: hidden; margin-bottom: 32px; }
+.prices-thead { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: var(--navy-dark); padding: 14px 22px; gap: 12px; }
+.pt-course-col { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+.pt-col { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); text-align: center; }
+.prices-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 16px 22px; gap: 12px; align-items: center; border-bottom: 1px solid var(--gray-200); transition: background 0.15s; }
+.prices-row:last-child { border-bottom: none; }
+.prices-row.even { background: var(--off-white); }
+.prices-row:hover { background: var(--blue-pale); }
+.pt-course-name { font-size: 14px; font-weight: 600; color: var(--navy-dark); }
+.pt-price-cell { text-align: center; }
+.pt-price-cell.highlight-col { background: rgba(37,99,235,0.06); border-radius: 8px; padding: 6px 4px; }
+.price-val { font-size: 13px; font-weight: 700; color: var(--navy-dark); }
+.price-na { font-size: 12px; color: var(--gray-300); font-style: italic; }
+
+.price-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 48px; }
+.price-info-card { display: flex; gap: 14px; background: var(--off-white); border: 2px solid var(--gray-200); border-radius: var(--radius); padding: 20px; }
+.price-info-card > span { font-size: 24px; flex-shrink: 0; }
+.price-info-card div { font-size: 14px; color: var(--gray-500); line-height: 1.7; }
+.price-info-card strong { display: block; margin-bottom: 4px; color: var(--navy-dark); font-size: 15px; }
+
+.prices-cta-box { text-align: center; background: linear-gradient(135deg, var(--navy-dark), var(--blue-bright)); border-radius: var(--radius-lg); padding: 56px 40px; }
+.prices-cta-box h2 { font-size: 34px; color: var(--white); margin-bottom: 12px; }
+.prices-cta-box p { font-size: 17px; color: rgba(255,255,255,0.65); margin-bottom: 28px; }
+
+@media (max-width: 768px) {
+  .prices-thead, .prices-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; padding: 12px 14px; }
+  .pt-course-name { font-size: 12px; }
+  .price-val { font-size: 11px; }
+}
+@media (max-width: 500px) {
+  .prices-thead, .prices-row { grid-template-columns: 1fr 1fr; }
+  .prices-thead .pt-col:first-of-type, .prices-row .pt-price-cell:first-of-type { display: none; }
+}

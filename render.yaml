@@ -1,0 +1,23 @@
+databases:
+  - name: skillup-academy-db
+    plan: free
+    databaseName: skillup
+    user: skillup
+
+services:
+  - type: web
+    name: skillup-academy-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: skillup-academy-db
+          property: connectionString

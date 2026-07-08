@@ -1,0 +1,111 @@
+/* Shared styles imported by pages that need modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,26,46,0.8);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: fadeUp 0.3s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.modal-close:hover { background: var(--gray-300); }
+
+.modal-teacher-header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: flex-start;
+}
+
+.modal-teacher-photo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid var(--cream);
+  flex-shrink: 0;
+}
+
+.modal-teacher-header h2 { font-size: 24px; margin-bottom: 6px; }
+.modal-subject { color: var(--orange); font-weight: 600; margin-bottom: 4px; }
+.modal-exp { font-size: 14px; color: var(--gray-500); margin-bottom: 4px; }
+.modal-edu { font-size: 13px; color: var(--gray-500); }
+
+.modal-bio {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--gray-700);
+  margin-bottom: 28px;
+}
+
+.modal-tags-section { margin-bottom: 24px; }
+.modal-tags-section h4 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  color: var(--navy);
+}
+
+.modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tag {
+  background: rgba(245,130,10,0.1);
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+
+.modal-achievements {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.modal-achievements li {
+  font-size: 14px;
+  color: var(--gray-700);
+  display: flex;
+  gap: 10px;
+}

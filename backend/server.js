@@ -1,0 +1,398 @@
+/**
+ * SkillUp Academy — Backend API
+ * Express + PostgreSQL (Neon/Render) with local-file fallback for dev.
+ *
+ * Storage:
+ *   - If DATABASE_URL is set → PostgreSQL (persistent, production)
+ *   - Else → local ./data.json file (dev only, NOT persistent on Render)
+ *
+ * Auth:
+ *   - HTTP Basic Auth on every /admin/* route except /admin/login, /admin/logout
+ *   - Credentials from ADMIN_USERNAME / ADMIN_PASSWORD env vars
+ */
+
+const express = require("express");
+const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+
+const PORT = process.env.PORT || 8000;
+const ADMIN_USER = process.env.ADMIN_USERNAME || "minbom404";
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || "Yuckfuo2026";
+const DATABASE_URL = process.env.DATABASE_URL || "";
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "5mb" }));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORAGE LAYER
+// ─────────────────────────────────────────────────────────────────────────────
+
+let pool = null;
+let STORAGE_MODE = "local file (NOT persistent)";
+
+if (DATABASE_URL) {
+  const { Pool } = require("pg");
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+  STORAGE_MODE = "PostgreSQL (persistent)";
+}
+
+const LOCAL_FILE = path.join(__dirname, "data.json");
+
+async function ensureTable() {
+  if (!pool) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skillup_data (
+      id INT PRIMARY KEY,
+      data JSONB NOT NULL
+    )
+  `);
+}
+
+async function loadData() {
+  if (pool) {
+    await ensureTable();
+    const res = await pool.query("SELECT data FROM skillup_data WHERE id = 1");
+    if (res.rows.length > 0) return res.rows[0].data;
+    const seeded = seedData();
+    await pool.query("INSERT INTO skillup_data (id, data) VALUES (1, $1)", [seeded]);
+    return seeded;
+  }
+  // Local file fallback
+  if (fs.existsSync(LOCAL_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));
+    } catch (e) {
+      console.error("Failed to parse local data.json, reseeding:", e.message);
+    }
+  }
+  const seeded = seedData();
+  fs.writeFileSync(LOCAL_FILE, JSON.stringify(seeded, null, 2));
+  return seeded;
+}
+
+async function saveData(data) {
+  if (pool) {
+    await ensureTable();
+    await pool.query(
+      `INSERT INTO skillup_data (id, data) VALUES (1, $1)
+       ON CONFLICT (id) DO UPDATE SET data = $1`,
+      [data]
+    );
+    return;
+  }
+  fs.writeFileSync(LOCAL_FILE, JSON.stringify(data, null, 2));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH MIDDLEWARE
+// ─────────────────────────────────────────────────────────────────────────────
+
+function requireAdmin(req, res, next) {
+  const auth = req.headers.authorization || "";
+  if (!auth.startsWith("Basic ")) {
+    return res.status(401).json({ detail: "Not authenticated" });
+  }
+  try {
+    const decoded = Buffer.from(auth.slice(6), "base64").toString("utf8");
+    const idx = decoded.indexOf(":");
+    const user = decoded.slice(0, idx);
+    const pass = decoded.slice(idx + 1);
+    if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  } catch {}
+  return res.status(401).json({ detail: "Not authenticated" });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTE DEFINITIONS (mounted at both "/" and "/api")
+// ─────────────────────────────────────────────────────────────────────────────
+
+const router = express.Router();
+
+router.get("/", async (req, res) => {
+  res.json({ status: "OK", storage: STORAGE_MODE });
+});
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+router.post("/admin/login", (req, res) => {
+  const { username, password } = req.body || {};
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    return res.json({ success: true });
+  }
+  return res.status(401).json({ detail: "Invalid credentials" });
+});
+
+router.post("/admin/logout", (req, res) => {
+  res.json({ success: true });
+});
+
+// ── PUBLIC ────────────────────────────────────────────────────────────────
+router.get("/courses", async (req, res) => {
+  const data = await loadData();
+  res.json(data.courses);
+});
+
+router.get("/courses/:id", async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  const course = data.courses.find((c) => c.id === id);
+  if (!course) return res.status(404).json({ detail: "Not found" });
+  const teachers = data.teachers.filter((t) =>
+    (course.teacher_ids || []).includes(t.id)
+  );
+  res.json({ ...course, teachers });
+});
+
+router.get("/teachers", async (req, res) => {
+  const data = await loadData();
+  res.json(data.teachers);
+});
+
+router.get("/prices", async (req, res) => {
+  const data = await loadData();
+  res.json(data.prices);
+});
+
+router.get("/testimonials", async (req, res) => {
+  const data = await loadData();
+  res.json(data.testimonials);
+});
+
+router.get("/feedbacks", async (req, res) => {
+  const data = await loadData();
+  res.json(data.feedbacks.filter((f) => f.approved));
+});
+
+router.post("/feedbacks", async (req, res) => {
+  const data = await loadData();
+  const body = req.body || {};
+  const fb = {
+    id: data.feedbacks.length + 1,
+    name: body.name || "Anonymous",
+    course: body.course || "",
+    rating: body.rating || 5,
+    text: body.text || "",
+    date: new Date().toISOString(),
+    approved: false,
+  };
+  data.feedbacks.push(fb);
+  await saveData(data);
+  res.json({ success: true });
+});
+
+router.post("/apply", async (req, res) => {
+  const data = await loadData();
+  const body = req.body || {};
+  const entry = {
+    id: data.applications.length + 1,
+    name: body.name,
+    phone: body.phone,
+    course: body.course,
+    message: body.message || "",
+    date: new Date().toISOString(),
+    status: "new",
+  };
+  data.applications.push(entry);
+  await saveData(data);
+  res.json({ success: true });
+});
+
+// ── ADMIN (Basic Auth required) ──────────────────────────────────────────
+router.get("/admin/applications", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  res.json(data.applications);
+});
+
+router.get("/admin/feedbacks", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  res.json(data.feedbacks);
+});
+
+router.put("/admin/feedbacks/:id/approve", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  const fb = data.feedbacks.find((f) => f.id === id);
+  if (!fb) return res.status(404).json({ detail: "Not found" });
+  fb.approved = true;
+  await saveData(data);
+  res.json(fb);
+});
+
+router.delete("/admin/feedbacks/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  data.feedbacks = data.feedbacks.filter((f) => f.id !== id);
+  await saveData(data);
+  res.json({ success: true });
+});
+
+router.put("/admin/prices/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  const idx = data.prices.findIndex((p) => p.id === id);
+  if (idx === -1) return res.status(404).json({ detail: "Not found" });
+  data.prices[idx] = { ...data.prices[idx], ...req.body };
+  await saveData(data);
+  res.json(data.prices[idx]);
+});
+
+router.post("/admin/courses", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const body = req.body || {};
+  const newId = Math.max(0, ...data.courses.map((c) => c.id)) + 1;
+  const course = {
+    id: newId,
+    category: body.category || "",
+    icon: body.icon || "📚",
+    title: body.title || "",
+    description: body.description || "",
+    program: body.program || [],
+    formats: body.formats || [],
+    duration: body.duration || "",
+    levels: body.levels || "",
+    teacher_ids: body.teacher_ids || [],
+    price_individual: body.price_individual || "",
+    note: body.note || "",
+  };
+  data.courses.push(course);
+  await saveData(data);
+  res.json(course);
+});
+
+router.put("/admin/courses/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  const idx = data.courses.findIndex((c) => c.id === id);
+  if (idx === -1) return res.status(404).json({ detail: "Not found" });
+  data.courses[idx] = { ...data.courses[idx], ...req.body, id };
+  await saveData(data);
+  res.json(data.courses[idx]);
+});
+
+router.delete("/admin/courses/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  data.courses = data.courses.filter((c) => c.id !== id);
+  await saveData(data);
+  res.json({ success: true });
+});
+
+router.post("/admin/teachers", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const body = req.body || {};
+  const newId = Math.max(0, ...data.teachers.map((t) => t.id)) + 1;
+  const teacher = {
+    id: newId,
+    name: body.name || "",
+    subject: body.subject || "",
+    experience: body.experience || "",
+    photo:
+      body.photo ||
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${newId}`,
+    short_bio: body.short_bio || "",
+    full_bio: body.full_bio || "",
+    education: body.education || "",
+    certifications: body.certifications || [],
+    achievements: body.achievements || [],
+  };
+  data.teachers.push(teacher);
+  await saveData(data);
+  res.json(teacher);
+});
+
+router.put("/admin/teachers/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  const idx = data.teachers.findIndex((t) => t.id === id);
+  if (idx === -1) return res.status(404).json({ detail: "Not found" });
+  data.teachers[idx] = { ...data.teachers[idx], ...req.body, id };
+  await saveData(data);
+  res.json(data.teachers[idx]);
+});
+
+router.delete("/admin/teachers/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  const id = parseInt(req.params.id, 10);
+  data.teachers = data.teachers.filter((t) => t.id !== id);
+  await saveData(data);
+  res.json({ success: true });
+});
+
+// Mount router at both "/" and "/api" so it works for prod (Render, no prefix)
+// and local dev (frontend calls with "/api" prefix on localhost)
+app.use("/", router);
+app.use("/api", router);
+
+// ── 404 + error handling ──────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ detail: "Not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ detail: "Internal server error: " + err.message });
+});
+
+app.listen(PORT, () => {
+  console.log(`SkillUp Academy API running on port ${PORT}`);
+  console.log(`Storage mode: ${STORAGE_MODE}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEED DATA
+// ─────────────────────────────────────────────────────────────────────────────
+function seedData() {
+  return {
+    courses: [
+      { id:1,  category:"English", icon:"🌍", title:"General English",                    description:"Comprehensive English for all levels. Build fluency in speaking, writing, reading and listening.",       program:["Grammar A1–C2","Conversational fluency","Business English","Reading & writing","Listening comprehension"],                              formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"3–12 months",        levels:"A1 – C2",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:2,  category:"English", icon:"📊", title:"IELTS Preparation",                   description:"Targeted IELTS prep for band 6.5–8.0. Expert strategies across all four skills.",                       program:["Writing Task 1 & 2","Speaking Part 1–3","Reading techniques","Listening mastery","Mock tests & feedback"],             formats:["Group (4–6)","Individual","Intensive crash course"], duration:"2–6 months",         levels:"B1 – C1",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:3,  category:"English", icon:"🎯", title:"CEFR Preparation",                    description:"Official CEFR level certification prep A1–C2. Internationally recognised qualification.",               program:["CEFR level diagnostics","Level-specific grammar","Exam technique per level","Speaking & writing prep","Mock CEFR exams"],  formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"2–8 months",         levels:"A1 – C2",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:4,  category:"Math",    icon:"📐", title:"Math in Russian",                     description:"Mathematics taught in Russian. School curriculum, olympiad prep, and university foundation.",            program:["Algebra & number theory","Geometry & trigonometry","Functions & calculus","Probability & statistics","Problem-solving"],    formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"3–12 months",        levels:"Grade 5 – 11",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:5,  category:"Math",    icon:"🏫", title:"Westminster Lyceum & University Prep", description:"Targeted preparation for Westminster Lyceum and Westminster University entrance exams.",                 program:["Westminster exam format","Math & English integrated prep","Critical thinking","Past paper practice","Interview preparation"], formats:["Group (4–6)","Individual","Intensive"],         duration:"3–6 months",         levels:"Grade 9 – 12",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:6,  category:"Math",    icon:"🎓", title:"SAT Math",                            description:"SAT Math prep covering Heart of Algebra, Advanced Math, and Data Analysis.",                            program:["Heart of Algebra","Advanced Math","Problem Solving & Data Analysis","Geometry","Calculator & No-Calculator sections"],       formats:["Group (4–6)","Individual"],                     duration:"3–6 months",         levels:"Grade 10–12",            teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:7,  category:"Math",    icon:"🏅", title:"Milliy Sertifikat",                   description:"Preparation for Uzbekistan's national certificate exam in Mathematics.",                                 program:["National curriculum review","Exam format & marking","Common question types","Speed & accuracy","Full mock exams"],           formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"2–6 months",         levels:"Grade 9 – 11",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:8,  category:"Math",    icon:"🔬", title:"CSCA — Math & Physics",               description:"Preparation for the Chinese Standard Certificate Assessment in Math and Physics.",                       program:["CSCA exam format","Advanced Mathematics","Physics problem-solving","Chinese academic terms","Mock exams"],                  formats:["Group (3–6)","Individual","Mini-group (2–3)"],  duration:"4–8 months",         levels:"Intermediate – Advanced",teacher_ids:[3,4], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:9,  category:"Russian", icon:"🇷🇺",title:"Russian for Foreigners",              description:"Russian for non-native speakers — taught entirely in English.",                                         program:["Cyrillic & phonetics","Core grammar in English","Everyday conversation","Reading & writing","Russian culture"],             formats:["Individual only","Mini-group (2–3)"],           duration:"Flexible",           levels:"A1 – B2",                teacher_ids:[5],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
+      { id:10, category:"Uzbek",   icon:"🇺🇿",title:"Uzbek for Foreigners",               description:"Uzbek for non-native speakers — taught entirely in English.",                                           program:["Uzbek alphabet & pronunciation","Essential grammar in English","Daily conversation","Reading & writing","Culture"],           formats:["Individual only","Mini-group (2–3)"],           duration:"Flexible",           levels:"A1 – B1",                teacher_ids:[6],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
+      { id:11, category:"German",  icon:"🇩🇪",title:"German Language (A1 → C2)",          description:"German from zero to C2. Full Goethe Institut certificate preparation included.",                       program:["German phonetics & alphabet","Grammar A1–C2","Conversational German","Goethe exam strategies","Mock Goethe exams"],          formats:["Individual only","Mini-group (2–3)"],           duration:"6 months – 3 years", levels:"A1 – C2",                teacher_ids:[7],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Individual & mini-group only." },
+      { id:12, category:"Spanish", icon:"🇪🇸",title:"Spanish Language",                   description:"Spanish from beginner to advanced with expert instructors.",                                             program:["Spanish phonetics","Core grammar A1–C1","Conversational Spanish","Reading & writing","DELE/SIELE exam prep"],              formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"Flexible",           levels:"A1 – C1",                teacher_ids:[8],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+    ],
+    teachers: [
+      { id:1, name:"Sarah Mitchell",   subject:"General English & IELTS",      experience:"8 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah&backgroundColor=b6e3f4",   short_bio:"Cambridge CELTA certified IELTS examiner with 8 years of experience.",              full_bio:"Sarah Mitchell holds an M.A. in Applied Linguistics from the University of Manchester. A certified IELTS examiner and Cambridge CELTA instructor, her students achieve average band improvements of 1.5 in just 3 months.", education:"M.A. Applied Linguistics, University of Manchester",        certifications:["Cambridge CELTA","IELTS Examiner","DELTA Module 1"],           achievements:["100+ students scored 7.0+ IELTS","Published IELTS prep guides","Former British Council teacher"] },
+      { id:2, name:"James Anderson",   subject:"CEFR & SAT English",           experience:"6 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=James&backgroundColor=c0aede",   short_bio:"SAT & CEFR specialist. Former Princeton Review instructor, scored 1580 SAT.",       full_bio:"James Anderson scored 1580 on the SAT and is a former Princeton Review instructor. He specialises in CEFR certification and SAT English strategic prep.",                                                                 education:"B.A. English Literature, Yale University",                          certifications:["Princeton Review Certified","SAT Specialist","CEFR Assessor"], achievements:["200+ average score improvement","Former Princeton Review lead","98th percentile SAT scorer"] },
+      { id:3, name:"Dr. Amir Karimov", subject:"Mathematics (all programs)",   experience:"10 years", photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Amir&backgroundColor=ffd5dc",   short_bio:"PhD Math. Westminster, SAT, Milliy Sertifikat & CSCA specialist.",                  full_bio:"Dr. Amir Karimov holds a PhD in Pure Mathematics. His 92% Westminster acceptance rate and 50+ perfect SAT Math scores speak for themselves.",                                                                             education:"Ph.D. Pure Mathematics, National University of Uzbekistan",         certifications:["PhD Mathematics","SAT Specialist","Westminster Prep Certified"],achievements:["50+ perfect SAT Math 800s","92% Westminster acceptance rate","Published 3 textbooks"] },
+      { id:4, name:"Li Wei Chen",      subject:"Chinese Exams & CSCA",         experience:"7 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=LiWei&backgroundColor=d1f7c4",  short_bio:"Native Mandarin speaker, CSCA examiner from Peking University.",                    full_bio:"Li Wei Chen graduated from Peking University and specialises in CSCA Math & Physics preparation. 200+ students have passed CSCA under her guidance.",                                                                     education:"B.Ed. Teaching Chinese as Foreign Language, Peking University",     certifications:["HSK Level 6","CSCA Examiner","Physics Specialist"],            achievements:["200+ CSCA passers","Immersive Mandarin curriculum","Guest lecturer at 3 universities"] },
+      { id:5, name:"Natalia Ivanova",  subject:"Russian for Foreigners",       experience:"9 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Natalia&backgroundColor=ffeaa7", short_bio:"RFL certified. Teaches Russian entirely through English.",                           full_bio:"Natalia Ivanova holds an M.A. in Russian Philology and teaches Russian exclusively through English — making grammar accessible to international students.",                                                                 education:"M.A. Russian Philology, St Petersburg State University",            certifications:["RFL Certified Teacher","TORFL Examiner"],                      achievements:["Students from 20+ countries","English-medium Russian method","Former Pushkin Institute teacher"] },
+      { id:6, name:"Zulfiya Nazarova", subject:"Uzbek for Foreigners",         experience:"5 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Zulfiya&backgroundColor=a8edea", short_bio:"Native Uzbek speaker. Teaches Uzbek through English for expats & foreigners.",      full_bio:"Zulfiya Nazarova specialises in teaching Uzbek as a foreign language through English. She has worked with diplomatic corps and business professionals.",                                                                   education:"B.A. Uzbek Linguistics, National University of Uzbekistan",         certifications:["UFL Certified Teacher","Uzbek Language Instructor"],           achievements:["100+ foreigners achieved conversational Uzbek","Worked with diplomatic corps","English-medium Uzbek curriculum"] },
+      { id:7, name:"Klaus Müller",     subject:"German Language & Goethe Prep",experience:"5 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Klaus&backgroundColor=dfe6e9",  short_bio:"Native German speaker. Goethe Institut certified A1–C2 instructor from Munich.",    full_bio:"Klaus Müller is a native German speaker from Munich, Goethe Institut certified. He guides students from absolute beginner to C2 with custom plans.",                                                                      education:"B.A. German Language & Literature, Ludwig Maximilian University",   certifications:["Goethe Institut Certified","DaF Instructor","C2 Proficiency"], achievements:["80+ Goethe exam passers","Full A1–C2 program","Custom plans for every student"] },
+      { id:8, name:"Isabella García",  subject:"Spanish Language",             experience:"6 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella&backgroundColor=fdcb6e", short_bio:"Native Spanish speaker from Madrid. DELE examiner with 6 years experience.",        full_bio:"Isabella García is a DELE examiner from Madrid. Her communicative teaching method delivers fast, real-world results from A1 to C1.",                                                                                       education:"B.A. Hispanic Philology, Complutense University of Madrid",         certifications:["DELE Examiner","SIELE Instructor","Instituto Cervantes Certified"],achievements:["100+ DELE exam passers","Full A1–C1 curriculum","Former Instituto Cervantes teacher"] },
+    ],
+    prices: [
+      { id:1,  course:"General English",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:"600,000 UZS/month" },
+      { id:2,  course:"IELTS Preparation",       individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
+      { id:3,  course:"CEFR Preparation",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,000,000 UZS/month", group:"650,000 UZS/month" },
+      { id:4,  course:"Math in Russian",         individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:"600,000 UZS/month" },
+      { id:5,  course:"Westminster Prep",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
+      { id:6,  course:"SAT Math",                individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
+      { id:7,  course:"Milliy Sertifikat",       individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:"580,000 UZS/month" },
+      { id:8,  course:"CSCA Math & Physics",     individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,050,000 UZS/month", group:"680,000 UZS/month" },
+      { id:9,  course:"Russian for Foreigners",  individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:null },
+      { id:10, course:"Uzbek for Foreigners",    individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:null },
+      { id:11, course:"German (A1–C2)",          individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:null },
+      { id:12, course:"Spanish",                 individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:"620,000 UZS/month" },
+    ],
+    testimonials: [
+      { id:1, name:"Zulfiya Rahimova", course:"IELTS Preparation",    score:"Band 7.5",  text:"SkillUp Academy changed my life. I went from 5.5 to 7.5 in 4 months. Sarah's methods are incredible!", avatar:"ZR", rating:5 },
+      { id:2, name:"Bobur Tashmatov",  course:"SAT Math",             score:"790/800",   text:"Dr. Karimov is the best math teacher I've ever had. Crystal-clear explanations and real strategies.",   avatar:"BT", rating:5 },
+      { id:3, name:"Anna Schmidt",     course:"Russian for Foreigners",score:"B1 Level",  text:"Natalia is incredibly patient. After 6 months in English, I can hold full Russian conversations!",     avatar:"AS", rating:5 },
+      { id:4, name:"Marcus Bauer",     course:"German Language",      score:"Goethe B2", text:"Klaus took me from zero to B2 in 14 months. I passed the Goethe exam on my first attempt!",           avatar:"MB", rating:5 },
+      { id:5, name:"Kamola Yusupova",  course:"Westminster Prep",     score:"Accepted",  text:"Dr. Karimov's Westminster prep was extraordinary. I got accepted on my first application!",             avatar:"KY", rating:5 },
+    ],
+    feedbacks: [],
+    applications: [],
+  };
+}
