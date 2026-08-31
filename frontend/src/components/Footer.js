@@ -38,6 +38,8 @@ export default function Footer() {
               <li><Link to="/teachers">{t('nav_teachers')}</Link></li>
               <li><Link to="/prices">{t('nav_prices')}</Link></li>
               <li><Link to="/feedback">{t('nav_feedback')}</Link></li>
+              <li><Link to="/how-it-works">{t('nav_how')}</Link></li>
+              <li><Link to="/faq">{t('nav_faq')}</Link></li>
               <li><Link to="/#apply">{t('nav_enroll')}</Link></li>
             </ul>
           </div>

@@ -117,4 +117,22 @@
   .form-grid .span2 { grid-column: span 1; }
   .price-edit-grid { grid-template-columns: 1fr; }
   .price-display { flex-direction: column; align-items: flex-start; }
+  .admin-header { padding: 88px 0 32px; }
+  .admin-header h1 { font-size: 30px; }
+  .admin-content { padding: 22px; }
+  .admin-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .admin-tab { white-space: nowrap; flex-shrink: 0; }
+  .crud-item { flex-direction: column; align-items: flex-start; }
+  .crud-actions { width: 100%; }
+  .crud-actions button { flex: 1; }
+}
+@media (max-width: 480px) {
+  .login-card { padding: 28px 22px; }
+  .admin-header h1 { font-size: 24px; }
+  .admin-header-inner { flex-direction: column; align-items: stretch; }
+  .logout-btn { width: 100%; }
+  .admin-content { padding: 16px; }
+  .app-card { padding: 16px; }
+  .app-details { gap: 10px; }
+  .price-vals { gap: 14px; }
 }

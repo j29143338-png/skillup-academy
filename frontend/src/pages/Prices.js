@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getPrices } from '../api';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './Prices.css';
 
 export default function Prices() {
   const { t } = useLang();
+  useSEO(t('simple_pricing'), t('pricing_subtitle'));
   const [prices, setPrices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +58,7 @@ export default function Prices() {
                 <div className="pt-course-name">{price.course}</div>
                 {formats.map(f => (
                   <div key={f.key} className={`pt-price-cell ${f.highlight ? 'highlight-col' : ''}`}>
+                    <span className="pt-cell-label">{f.icon} {f.label}</span>
                     {price[f.key] ? <span className="price-val">{price[f.key]}</span> : <span className="price-na">{t('not_available')}</span>}
                   </div>
                 ))}

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getTeachers } from '../api';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './Teachers.css';
 
 export default function Teachers() {
   const { t } = useLang();
+  useSEO(t('meet_teachers'), t('teachers_subtitle'));
   const [teachers, setTeachers] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function Teachers() {
             {teachers.map(teacher => (
               <div key={teacher.id} className="teacher-full-card" onClick={() => setSelected(teacher)}>
                 <div className="tfc-photo-wrap">
-                  <img src={teacher.photo} alt={teacher.name} className="tfc-photo" />
+                  <img src={teacher.photo} alt={teacher.name} className="tfc-photo" loading="lazy" />
                   <div className="tfc-hover-overlay"><span>View Profile →</span></div>
                 </div>
                 <div className="tfc-body">
@@ -56,7 +58,7 @@ export default function Teachers() {
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setSelected(null)}>✕</button>
             <div className="modal-teacher-header">
-              <img src={selected.photo} alt={selected.name} className="modal-teacher-photo" />
+              <img src={selected.photo} alt={selected.name} className="modal-teacher-photo" loading="lazy" />
               <div>
                 <h2>{selected.name}</h2>
                 <p className="modal-subject">{selected.subject}</p>
@@ -66,7 +68,7 @@ export default function Teachers() {
             </div>
             <p className="modal-bio">{selected.full_bio}</p>
             <div className="modal-tags-section"><h4>Certifications</h4><div className="modal-tags">{selected.certifications.map((c,i)=><span key={i} className="tag">{c}</span>)}</div></div>
-            <div className="modal-tags-section"><h4>Achievements</h4><ul className="modal-achievements">{selected.achievements.map((a,i)=><li key={i}>✓ {a}</li>)}</ul></div>
+            {/* Achievements intentionally hidden until verified real data is entered via Admin panel — see backend/ARCHITECTURE.md */}
             <button className="btn-primary" onClick={() => { setSelected(null); window.location.href='/#apply'; }}>
               Book a Lesson with {selected.name.split(' ')[0]}
             </button>

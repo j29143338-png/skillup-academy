@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCourse } from '../api';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './CourseDetail.css';
 
 export default function CourseDetail() {
@@ -10,6 +11,7 @@ export default function CourseDetail() {
   const { t } = useLang();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
+  useSEO(course?.title, course?.description);
 
   useEffect(() => {
     getCourse(parseInt(id)).then(d => { setCourse(d); setLoading(false); }).catch(() => setLoading(false));

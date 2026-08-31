@@ -33,12 +33,33 @@
 .prices-cta-box h2 { font-size: 34px; color: var(--white); margin-bottom: 12px; }
 .prices-cta-box p { font-size: 17px; color: rgba(255,255,255,0.65); margin-bottom: 28px; }
 
-@media (max-width: 768px) {
+/* Label shown only in the stacked mobile layout */
+.pt-cell-label { display: none; }
+
+@media (max-width: 900px) {
   .prices-thead, .prices-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; padding: 12px 14px; }
-  .pt-course-name { font-size: 12px; }
-  .price-val { font-size: 11px; }
+  .pt-course-name { font-size: 13px; }
+  .price-val { font-size: 12px; }
 }
-@media (max-width: 500px) {
-  .prices-thead, .prices-row { grid-template-columns: 1fr 1fr; }
-  .prices-thead .pt-col:first-of-type, .prices-row .pt-price-cell:first-of-type { display: none; }
+
+/* Below 700px the 4-column table stops being readable — switch to stacked
+   cards so every format's price stays visible instead of being hidden. */
+@media (max-width: 700px) {
+  .prices-thead { display: none; }
+  .prices-row { grid-template-columns: 1fr; gap: 8px; padding: 16px 18px; }
+  .prices-row.even { background: var(--off-white); }
+  .pt-course-name { font-size: 15px; margin-bottom: 4px; }
+  .pt-price-cell { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; padding: 6px 0; border-top: 1px solid var(--gray-200); }
+  .pt-price-cell.highlight-col { background: transparent; padding: 6px 0; }
+  .pt-cell-label { display: inline; font-size: 12px; font-weight: 600; color: var(--gray-500); }
+  .price-val, .price-na { font-size: 13px; text-align: right; }
+}
+
+@media (max-width: 480px) {
+  .prices-body { padding-top: 32px; }
+  .format-legend-card { padding: 14px 16px; min-width: 100%; }
+  .prices-cta-box { padding: 36px 20px; }
+  .prices-cta-box h2 { font-size: 24px; }
+  .prices-cta-box p { font-size: 15px; }
+  .price-info-card { padding: 16px; }
 }

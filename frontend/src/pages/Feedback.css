@@ -68,7 +68,18 @@
 .review-text { font-size: 14px; color: var(--gray-700); line-height: 1.7; margin-bottom: 12px; font-style: italic; }
 .review-date { font-size: 12px; color: var(--gray-400); }
 
+@media (max-width: 768px) {
+  .fb-body { padding-top: 32px; }
+  .fb-form-wrap { padding: 24px; }
+  .fb-top-bar .btn-primary { width: 100%; justify-content: center; }
+}
 @media (max-width: 600px) {
   .fb-form-row { grid-template-columns: 1fr; }
   .reviews-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .fb-form-wrap { padding: 18px; }
+  .review-card { padding: 20px; }
+  .fb-empty { padding: 48px 18px; }
+  .star-btn { font-size: 24px; }
 }

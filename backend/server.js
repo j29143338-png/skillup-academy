@@ -8,21 +8,92 @@
  *
  * Auth:
  *   - HTTP Basic Auth on every /admin/* route except /admin/login, /admin/logout
- *   - Credentials from ADMIN_USERNAME / ADMIN_PASSWORD env vars
+ *   - Credentials from ADMIN_USERNAME / ADMIN_PASSWORD_HASH (bcrypt) env vars.
+ *     Set ADMIN_PASSWORD_HASH in production — see README for how to generate it.
+ *     ADMIN_PASSWORD (plaintext) is a dev-only fallback and logs a warning.
  */
 
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcryptjs");
 
 const PORT = process.env.PORT || 8000;
-const ADMIN_USER = process.env.ADMIN_USERNAME || "minbom404";
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "Yuckfuo2026";
+const ADMIN_USER = process.env.ADMIN_USERNAME || "admin";
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || "";
+const ADMIN_PASSWORD_PLAINTEXT = process.env.ADMIN_PASSWORD || "";
 const DATABASE_URL = process.env.DATABASE_URL || "";
 
+if (!ADMIN_PASSWORD_HASH) {
+  console.warn(
+    "⚠️  ADMIN_PASSWORD_HASH not set — falling back to plaintext ADMIN_PASSWORD comparison (dev only). " +
+    "Set ADMIN_PASSWORD_HASH in production, see README."
+  );
+}
+
+async function checkAdminCredentials(user, pass) {
+  if (user !== ADMIN_USER) return false;
+  if (ADMIN_PASSWORD_HASH) {
+    // A malformed hash makes bcrypt reject — treat that as a failed login,
+    // never as an unhandled rejection that would hang the request.
+    try {
+      return await bcrypt.compare(pass || "", ADMIN_PASSWORD_HASH);
+    } catch (e) {
+      console.error("bcrypt.compare failed — check ADMIN_PASSWORD_HASH format:", e.message);
+      return false;
+    }
+  }
+  return !!ADMIN_PASSWORD_PLAINTEXT && pass === ADMIN_PASSWORD_PLAINTEXT;
+}
+
+// ── Simple in-memory rate limiter (per IP + bucket) ─────────────────────────
+// Not distributed — fine for a single Render instance. Resets on restart.
+const rateBuckets = new Map();
+// Drop buckets nothing has touched for an hour so the map can't grow forever.
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [key, hits] of rateBuckets) {
+    if (!hits.length || hits[hits.length - 1] < cutoff) rateBuckets.delete(key);
+  }
+}, 30 * 60 * 1000).unref();
+
+function rateLimit(bucket, max, windowMs) {
+  return (req, res, next) => {
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+    const key = `${bucket}:${ip}`;
+    const now = Date.now();
+    const hits = (rateBuckets.get(key) || []).filter((t) => now - t < windowMs);
+    if (hits.length >= max) {
+      return res.status(429).json({ detail: "Too many requests, please try again later." });
+    }
+    hits.push(now);
+    rateBuckets.set(key, hits);
+    next();
+  };
+}
+
+// ── Basic input sanitising ──────────────────────────────────────────────────
+function clean(value, maxLen = 500) {
+  return String(value ?? "").trim().slice(0, maxLen);
+}
+
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (ALLOWED_ORIGINS.length === 0) {
+  console.warn("⚠️  ALLOWED_ORIGIN not set — CORS is open to any origin (dev only). Set it in production.");
+}
+
 const app = express();
-app.use(cors());
+app.use(
+  cors(
+    ALLOWED_ORIGINS.length
+      ? { origin: ALLOWED_ORIGINS }
+      : {}
+  )
+);
 app.use(express.json({ limit: "5mb" }));
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,6 +122,61 @@ async function ensureTable() {
       data JSONB NOT NULL
     )
   `);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FUTURE SCHEMA — foundation for upcoming role-based dashboards
+// (student / parent / teacher / administrator / owner — see backend/ARCHITECTURE.md)
+// These tables are created but NOT used by any route yet. No current feature
+// depends on them; this only prepares storage so real data can be entered
+// once the login/dashboard work for each role is built in a later stage.
+// ─────────────────────────────────────────────────────────────────────────────
+async function ensureFutureTables() {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('student','parent','teacher','admin','owner')),
+        full_name TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        created_by INTEGER REFERENCES users(id)
+      );
+      CREATE TABLE IF NOT EXISTS contracts (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id),
+        contract_start DATE NOT NULL,
+        contract_end DATE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS lesson_packages (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id),
+        contract_id INTEGER REFERENCES contracts(id),
+        lessons_paid INTEGER NOT NULL DEFAULT 0,
+        lessons_used INTEGER NOT NULL DEFAULT 0,
+        purchased_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS schedule_slots (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id),
+        weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+        time TEXT NOT NULL,
+        format TEXT NOT NULL CHECK (format IN ('group','individual'))
+      );
+      CREATE TABLE IF NOT EXISTS action_log (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        action TEXT NOT NULL,
+        target TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+  } catch (e) {
+    console.error("ensureFutureTables failed (non-fatal, current site is unaffected):", e.message);
+  }
 }
 
 async function loadData() {
@@ -92,7 +218,7 @@ async function saveData(data) {
 // AUTH MIDDLEWARE
 // ─────────────────────────────────────────────────────────────────────────────
 
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   const auth = req.headers.authorization || "";
   if (!auth.startsWith("Basic ")) {
     return res.status(401).json({ detail: "Not authenticated" });
@@ -102,7 +228,7 @@ function requireAdmin(req, res, next) {
     const idx = decoded.indexOf(":");
     const user = decoded.slice(0, idx);
     const pass = decoded.slice(idx + 1);
-    if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+    if (await checkAdminCredentials(user, pass)) return next();
   } catch {}
   return res.status(401).json({ detail: "Not authenticated" });
 }
@@ -118,9 +244,9 @@ router.get("/", async (req, res) => {
 });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────
-router.post("/admin/login", (req, res) => {
+router.post("/admin/login", rateLimit("admin-login", 10, 5 * 60 * 1000), async (req, res) => {
   const { username, password } = req.body || {};
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
+  if (await checkAdminCredentials(username, password)) {
     return res.json({ success: true });
   }
   return res.status(401).json({ detail: "Invalid credentials" });
@@ -162,20 +288,28 @@ router.get("/testimonials", async (req, res) => {
   res.json(data.testimonials);
 });
 
+router.get("/results", async (req, res) => {
+  const data = await loadData();
+  res.json(data.results || []);
+});
+
 router.get("/feedbacks", async (req, res) => {
   const data = await loadData();
   res.json(data.feedbacks.filter((f) => f.approved));
 });
 
-router.post("/feedbacks", async (req, res) => {
+router.post("/feedbacks", rateLimit("feedbacks", 10, 60 * 60 * 1000), async (req, res) => {
   const data = await loadData();
   const body = req.body || {};
+  const text = clean(body.text, 2000);
+  if (!text) return res.status(400).json({ detail: "Review text is required" });
+  const nextId = Math.max(0, ...data.feedbacks.map((f) => f.id)) + 1;
   const fb = {
-    id: data.feedbacks.length + 1,
-    name: body.name || "Anonymous",
-    course: body.course || "",
-    rating: body.rating || 5,
-    text: body.text || "",
+    id: nextId,
+    name: clean(body.name, 100) || "Anonymous",
+    course: clean(body.course, 150),
+    rating: Math.min(5, Math.max(1, parseInt(body.rating, 10) || 5)),
+    text,
     date: new Date().toISOString(),
     approved: false,
   };
@@ -184,15 +318,25 @@ router.post("/feedbacks", async (req, res) => {
   res.json({ success: true });
 });
 
-router.post("/apply", async (req, res) => {
+router.post("/apply", rateLimit("apply", 15, 60 * 60 * 1000), async (req, res) => {
   const data = await loadData();
   const body = req.body || {};
+  const name = clean(body.name, 100);
+  const phone = clean(body.phone, 30);
+  if (!name || !phone) return res.status(400).json({ detail: "Name and phone are required" });
+  const nextId = Math.max(0, ...data.applications.map((a) => a.id)) + 1;
   const entry = {
-    id: data.applications.length + 1,
-    name: body.name,
-    phone: body.phone,
-    course: body.course,
-    message: body.message || "",
+    id: nextId,
+    name,
+    phone,
+    age: clean(body.age, 10),
+    telegram: clean(body.telegram, 100),
+    course: clean(body.course, 150),
+    format: clean(body.format, 50),
+    days: clean(body.days, 200),
+    time: clean(body.time, 100),
+    purpose: clean(body.purpose, 30) || "trial",
+    message: clean(body.message, 1000),
     date: new Date().toISOString(),
     status: "new",
   };
@@ -322,6 +466,44 @@ router.delete("/admin/teachers/:id", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+router.post("/admin/results", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  if (!data.results) data.results = [];
+  const body = req.body || {};
+  const newId = Math.max(0, ...data.results.map((r) => r.id)) + 1;
+  const result = {
+    id: newId,
+    name: clean(body.name, 100),
+    course: clean(body.course, 150),
+    result: clean(body.result, 200),
+    date: clean(body.date, 30),
+    certificate_url: clean(body.certificate_url, 500),
+  };
+  data.results.push(result);
+  await saveData(data);
+  res.json(result);
+});
+
+router.put("/admin/results/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  if (!data.results) data.results = [];
+  const id = parseInt(req.params.id, 10);
+  const idx = data.results.findIndex((r) => r.id === id);
+  if (idx === -1) return res.status(404).json({ detail: "Not found" });
+  data.results[idx] = { ...data.results[idx], ...req.body, id };
+  await saveData(data);
+  res.json(data.results[idx]);
+});
+
+router.delete("/admin/results/:id", requireAdmin, async (req, res) => {
+  const data = await loadData();
+  if (!data.results) data.results = [];
+  const id = parseInt(req.params.id, 10);
+  data.results = data.results.filter((r) => r.id !== id);
+  await saveData(data);
+  res.json({ success: true });
+});
+
 // Mount router at both "/" and "/api" so it works for prod (Render, no prefix)
 // and local dev (frontend calls with "/api" prefix on localhost)
 app.use("/", router);
@@ -340,6 +522,9 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`SkillUp Academy API running on port ${PORT}`);
   console.log(`Storage mode: ${STORAGE_MODE}`);
+  ensureFutureTables().then(() => {
+    if (pool) console.log("Future-role schema ready (users/contracts/lesson_packages/schedule_slots/action_log)");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -394,5 +579,6 @@ function seedData() {
     ],
     feedbacks: [],
     applications: [],
+    results: [],
   };
 }

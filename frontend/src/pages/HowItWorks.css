@@ -1,0 +1,64 @@
+.hiw-body { padding: 64px 0 96px; }
+
+.hiw-section { max-width: 760px; margin: 0 auto 64px; }
+.hiw-section h2 { font-size: clamp(24px, 3vw, 32px); color: var(--navy-dark); margin-bottom: 20px; }
+.hiw-section p { font-size: 16px; line-height: 1.8; color: var(--gray-700); margin-bottom: 14px; }
+
+.hiw-support {
+  background: var(--orange-pale);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+}
+.hiw-support-note {
+  margin-top: 16px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--navy-dark);
+  font-weight: 600;
+}
+
+.hiw-timeline { display: flex; flex-direction: column; gap: 0; max-width: 640px; margin: 0 auto; }
+.hiw-timeline-item {
+  display: flex; align-items: flex-start; gap: 20px;
+  padding: 18px 0;
+  border-left: 2px solid var(--gray-200);
+  padding-left: 28px;
+  margin-left: 20px;
+  position: relative;
+}
+.hiw-timeline-item:last-child { border-left-color: transparent; }
+.hiw-timeline-num {
+  position: absolute; left: -21px; top: 14px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--orange); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-family: var(--font-display);
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(245,130,10,0.3);
+}
+.hiw-timeline-item p { font-size: 15px; color: var(--gray-900); font-weight: 500; padding-top: 6px; }
+
+.hiw-cta-box {
+  text-align: center;
+  background: var(--navy-dark);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.hiw-cta-box h3 { color: var(--white); font-size: 24px; margin-bottom: 20px; }
+
+@media (max-width: 768px) {
+  .hiw-body { padding: 40px 0 64px; }
+  .hiw-section { margin-bottom: 44px; }
+  .hiw-support { padding: 24px; }
+  .hiw-timeline { margin-left: 0; }
+  .hiw-timeline-item { padding-left: 20px; margin-left: 14px; }
+  .hiw-timeline-num { width: 32px; height: 32px; left: -16px; top: 16px; font-size: 14px; }
+}
+@media (max-width: 480px) {
+  .hiw-support { padding: 18px; }
+  .hiw-cta-box { padding: 32px 18px; }
+}

@@ -28,5 +28,6 @@ export const getTeachers       = () => get('/teachers');
 export const getTestimonials   = () => get('/testimonials');
 export const getPrices         = () => get('/prices');
 export const getFeedbacks      = () => get('/feedbacks');
+export const getResults        = () => get('/results');
 export const submitApplication = (data) => post('/apply', data);
 export const submitFeedback    = (data) => post('/feedbacks', data);

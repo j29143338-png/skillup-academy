@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './Admin.css';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -165,9 +166,43 @@ function TeacherForm({ teacher, onSave, onCancel, creds, t }) {
   );
 }
 
+// ─── RESULT FORM ──────────────────────────────────────────────────────────────
+function ResultForm({ result, onSave, onCancel, creds, t }) {
+  const [form, setForm] = useState(result || { name: '', course: '', result: '', date: '', certificate_url: '' });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const save = async () => {
+    setSaving(true); setErr('');
+    const path = result?.id ? `/admin/results/${result.id}` : '/admin/results';
+    const { ok, data } = await apiCall(path, result?.id ? 'PUT' : 'POST', form, creds);
+    if (ok) onSave(); else setErr(data.detail || 'Error saving');
+    setSaving(false);
+  };
+
+  return (
+    <div className="crud-form">
+      <h3>{result?.id ? 'Edit Result' : 'Add New Result'}</h3>
+      <div className="form-grid">
+        <div className="form-group"><label>Student name / initials</label><input value={form.name} onChange={e => setForm({...form,name:e.target.value})} placeholder="e.g. A.K. or full name" /></div>
+        <div className="form-group"><label>Course</label><input value={form.course} onChange={e => setForm({...form,course:e.target.value})} /></div>
+        <div className="form-group"><label>Result</label><input value={form.result} onChange={e => setForm({...form,result:e.target.value})} placeholder="e.g. IELTS 7.5, Accepted to Westminster" /></div>
+        <div className="form-group"><label>Date</label><input value={form.date} onChange={e => setForm({...form,date:e.target.value})} placeholder="e.g. 2026-06" /></div>
+        <div className="form-group span2"><label>Certificate URL (optional)</label><input value={form.certificate_url||''} onChange={e => setForm({...form,certificate_url:e.target.value})} placeholder="https://..." /></div>
+      </div>
+      {err && <div className="form-error" style={{marginBottom:12}}>{err}</div>}
+      <div className="form-actions">
+        <button className="btn-primary" onClick={save} disabled={saving}>{saving?'Saving...':t('save')}</button>
+        <button className="btn-cancel-admin" onClick={onCancel}>{t('cancel')}</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN ADMIN ───────────────────────────────────────────────────────────────
 export default function Admin() {
   const { t } = useLang();
+  useSEO(t('admin_title'), undefined, undefined, true);
 
   // Restore credentials from sessionStorage on page load
   const [creds, setCreds] = useState(() => {
@@ -175,14 +210,16 @@ export default function Admin() {
   });
 
   const [tab, setTab] = useState('applications');
-  const [data, setData] = useState({ applications:[], prices:[], teachers:[], courses:[], feedbacks:[] });
+  const [data, setData] = useState({ applications:[], prices:[], teachers:[], courses:[], feedbacks:[], results:[] });
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [editingPrice, setEditingPrice] = useState(null);
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingTeacher, setEditingTeacher] = useState(null);
+  const [editingResult, setEditingResult] = useState(null);
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showTeacherForm, setShowTeacherForm] = useState(false);
+  const [showResultForm, setShowResultForm] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
 
   const handleLogin  = (c) => setCreds(c);
@@ -191,12 +228,13 @@ export default function Admin() {
   const loadAll = useCallback(async () => {
     if (!creds) return;
     setLoading(true); setLoadError('');
-    const [appsRes, pricesRes, teachersRes, coursesRes, fbRes] = await Promise.all([
+    const [appsRes, pricesRes, teachersRes, coursesRes, fbRes, resultsRes] = await Promise.all([
       apiCall('/admin/applications', 'GET', null, creds),
       apiCall('/prices'),
       apiCall('/teachers'),
       apiCall('/courses'),
       apiCall('/admin/feedbacks', 'GET', null, creds),
+      apiCall('/results'),
     ]);
     // Only logout on explicit 401 — not network errors
     if (appsRes.status === 401) { handleLogout(); setLoading(false); return; }
@@ -206,6 +244,7 @@ export default function Admin() {
       teachers:     teachersRes.ok? teachersRes.data: [],
       courses:      coursesRes.ok ? coursesRes.data : [],
       feedbacks:    fbRes.ok      ? fbRes.data      : [],
+      results:      resultsRes.ok ? resultsRes.data : [],
     });
     if (!appsRes.ok) setLoadError(`Error (${appsRes.status}): ${appsRes.data?.detail || 'Could not load data'}`);
     setLoading(false);
@@ -221,6 +260,7 @@ export default function Admin() {
   const deleteTeacher   = async (id) => { if (!window.confirm('Delete?')) return; await apiCall(`/admin/teachers/${id}`, 'DELETE', null, creds); loadAll(); };
   const approveFeedback = async (id) => { await apiCall(`/admin/feedbacks/${id}/approve`, 'PUT', null, creds); loadAll(); };
   const deleteFeedback  = async (id) => { if (!window.confirm('Delete?')) return; await apiCall(`/admin/feedbacks/${id}`, 'DELETE', null, creds); loadAll(); };
+  const deleteResult    = async (id) => { if (!window.confirm('Delete?')) return; await apiCall(`/admin/results/${id}`, 'DELETE', null, creds); loadAll(); };
 
   if (!creds) return <LoginPage onLogin={handleLogin} t={t} />;
 
@@ -230,6 +270,7 @@ export default function Admin() {
     { id:'teachers',     label:t('tab_teachers'),     count:data.teachers.length },
     { id:'prices',       label:t('tab_prices'),       count:data.prices.length },
     { id:'feedbacks',    label:t('tab_feedbacks'),    count:data.feedbacks.length },
+    { id:'results',      label:t('tab_results'),      count:data.results.length },
   ];
 
   return (
@@ -268,13 +309,16 @@ export default function Admin() {
                       <div key={app.id} className="app-card">
                         <div className="app-card-header">
                           <div className="app-av">{app.name?.charAt(0)}</div>
-                          <div><strong>{app.name}</strong><p>{app.course}</p></div>
-                          <span className="app-status new">{app.status}</span>
+                          <div><strong>{app.name}</strong><p>{app.course}{app.format ? ` · ${app.format}` : ''}</p></div>
+                          <span className="app-status new">{app.purpose === 'level_check' ? 'level check' : (app.status || 'new')}</span>
                         </div>
                         <div className="app-details">
                           <div><span>📞</span> {app.phone}</div>
+                          {app.age && <div><span>🎂</span> {app.age}</div>}
+                          {app.telegram && <div><span>💬</span> {app.telegram}</div>}
+                          {(app.days || app.time) && <div><span>🗓</span> {[app.days, app.time].filter(Boolean).join(' · ')}</div>}
                           <div><span>📅</span> {new Date(app.date).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-                          {app.message && <div><span>💬</span> {app.message}</div>}
+                          {app.message && <div><span>✉️</span> {app.message}</div>}
                         </div>
                       </div>
                     ))}
@@ -384,6 +428,32 @@ export default function Admin() {
                         <div className="fb-actions">
                           {!fb.approved && <button className="crud-edit-btn" onClick={()=>approveFeedback(fb.id)}>✓ {t('approve')}</button>}
                           <button className="crud-delete-btn" onClick={()=>deleteFeedback(fb.id)}>🗑 {t('delete')}</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tab==='results' && (
+              <div>
+                <div className="section-header-admin">
+                  <h2>Student Results</h2>
+                  <button className="btn-primary" onClick={()=>{setShowResultForm(true);setEditingResult(null);}}>{t('add_result')}</button>
+                </div>
+                {showResultForm && !editingResult && <ResultForm creds={creds} t={t} onSave={()=>{setShowResultForm(false);loadAll();}} onCancel={()=>setShowResultForm(false)} />}
+                {editingResult && <ResultForm result={editingResult} creds={creds} t={t} onSave={()=>{setEditingResult(null);loadAll();}} onCancel={()=>setEditingResult(null)} />}
+                {data.results.length===0 ? (
+                  <div className="admin-empty">No results yet. Add real, verified student achievements above — they'll appear on the homepage once added.</div>
+                ) : (
+                  <div className="crud-list">
+                    {data.results.map(r => (
+                      <div key={r.id} className="crud-item">
+                        <div className="crud-info"><strong>{r.name}</strong><span className="crud-meta">{r.course} · {r.result} {r.date ? `· ${r.date}` : ''}</span></div>
+                        <div className="crud-actions">
+                          <button className="crud-edit-btn" onClick={()=>{setEditingResult(r);setShowResultForm(false);}}>{t('edit')}</button>
+                          <button className="crud-delete-btn" onClick={()=>deleteResult(r.id)}>🗑</button>
                         </div>
                       </div>
                     ))}

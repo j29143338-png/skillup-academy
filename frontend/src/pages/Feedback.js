@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getCourses, getTestimonials, getFeedbacks, submitFeedback } from '../api';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './Feedback.css';
 
 export default function Feedback() {
   const { t } = useLang();
+  useSEO(t('feedback_title'), t('feedback_subtitle'));
   const [reviews, setReviews] = useState([]);
   const [courses, setCourses] = useState([]);
   const [testimonials, setTestimonials] = useState([]);

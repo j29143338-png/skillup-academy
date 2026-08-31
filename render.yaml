@@ -15,7 +15,9 @@ services:
     envVars:
       - key: ADMIN_USERNAME
         sync: false
-      - key: ADMIN_PASSWORD
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: ALLOWED_ORIGIN
         sync: false
       - key: DATABASE_URL
         fromDatabase:

@@ -19,3 +19,4 @@
 .tag { background: var(--blue-pale); color: var(--blue-bright); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
 .tag-more { background: var(--gray-100); color: var(--gray-500); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
 @media (max-width: 600px) { .teachers-full-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .teachers-body { padding-top: 32px; } .tfc-photo-wrap { padding: 26px; } .tfc-photo { width: 96px; height: 96px; } .tfc-body { padding: 18px; } }

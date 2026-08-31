@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCourses } from '../api';
 import { useLang } from '../context/LangContext';
+import { useSEO } from '../hooks/useSEO';
 import './Courses.css';
 
 const catColors = {
@@ -15,6 +16,7 @@ const catColors = {
 
 export default function Courses() {
   const { t } = useLang();
+  useSEO(t('our_courses'), t('courses_subtitle'));
   const [courses, setCourses] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);

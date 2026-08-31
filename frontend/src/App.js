@@ -9,6 +9,8 @@ import CourseDetail from './pages/CourseDetail';
 import Teachers from './pages/Teachers';
 import Prices from './pages/Prices';
 import Feedback from './pages/Feedback';
+import HowItWorks from './pages/HowItWorks';
+import FAQ from './pages/FAQ';
 import Admin from './pages/Admin';
 
 function ScrollToTop() {
@@ -30,6 +32,8 @@ function Layout() {
         <Route path="/teachers" element={<Teachers />} />
         <Route path="/prices" element={<Prices />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/faq" element={<FAQ />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
       {!hideFooter && <Footer />}
