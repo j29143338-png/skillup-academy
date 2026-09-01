@@ -71,15 +71,19 @@ export default function Prices() {
         <div className="price-info-grid">
           <div className="price-info-card">
             <span>📌</span>
-            <div><strong>Russian, Uzbek & German</strong><br />{t('note_ru_de')}</div>
+            <div><strong>{t('note_ru_de_title')}</strong><br />{t('note_ru_de')}</div>
           </div>
           <div className="price-info-card">
             <span>🎁</span>
-            <div><strong>Free Trial Lesson</strong><br />{t('note_trial')}</div>
+            <div><strong>{t('note_trial_title')}</strong><br />{t('note_trial')}</div>
+          </div>
+          <div className="price-info-card">
+            <span>🏠</span>
+            <div><strong>{t('note_home_title')}</strong><br />{t('note_home')}</div>
           </div>
           <div className="price-info-card">
             <span>📦</span>
-            <div><strong>Bundle Packages</strong><br />{t('note_packages')}</div>
+            <div><strong>{t('note_packages_title')}</strong><br />{t('note_packages')}</div>
           </div>
         </div>
 

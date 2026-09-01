@@ -63,6 +63,9 @@ export default function Courses() {
                   <div className="cfc-body">
                     <h3>{course.title}</h3>
                     <p>{course.description}</p>
+                    {course.audience && (
+                      <div className="cfc-audience"><span className="cfc-audience-label">{t('for_whom')}</span>{course.audience}</div>
+                    )}
                     {course.note && <div className="cfc-note">📌 {course.note}</div>}
                     <div className="cfc-formats">
                       {course.formats?.slice(0, 2).map((f, i) => <span key={i} className="cfc-fmt">{f}</span>)}
@@ -71,7 +74,7 @@ export default function Courses() {
                       <span>⏱ {course.duration}</span>
                       <span>📚 {course.levels}</span>
                     </div>
-                    <div className="cfc-cta" style={{ color: col.color }}>View Full Program →</div>
+                    <div className="cfc-cta" style={{ color: col.color }}>{t('view_program')}</div>
                   </div>
                 </div>
               );

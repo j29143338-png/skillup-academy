@@ -51,3 +51,20 @@
   .cd-meta-item { padding: 12px 14px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); width: 100%; }
   .cd-cta-box, .cd-teachers-box { padding: 18px; }
 }
+
+/* "Who it's for", shown under the course description in the hero */
+.cd-audience {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 640px;
+}
+.cd-audience strong { margin-right: 6px; }
+
+@media (max-width: 768px) {
+  .cd-audience { font-size: 0.9rem; padding: 9px 12px; }
+}

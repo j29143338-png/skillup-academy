@@ -4,16 +4,16 @@ import { useLang } from '../context/LangContext';
 import { useSEO } from '../hooks/useSEO';
 import './FAQ.css';
 
-const QUESTION_COUNT = 13;
+const QUESTION_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 12, 13];
 
 export default function FAQ() {
   const { t } = useLang();
   useSEO(t('faq_title'), t('faq_subtitle'));
   const [openIndex, setOpenIndex] = useState(0);
 
-  const items = Array.from({ length: QUESTION_COUNT }, (_, i) => ({
-    q: t(`faq_q${i + 1}`),
-    a: t(`faq_a${i + 1}`),
+  const items = QUESTION_ORDER.map((n) => ({
+    q: t(`faq_q${n}`),
+    a: t(`faq_a${n}`),
   }));
 
   return (

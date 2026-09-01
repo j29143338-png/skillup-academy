@@ -83,7 +83,7 @@ function LoginPage({ onLogin, t }) {
 
 // ─── COURSE FORM ──────────────────────────────────────────────────────────────
 function CourseForm({ course, onSave, onCancel, creds, t }) {
-  const [form, setForm] = useState(course || { category:'English', icon:'📚', title:'', description:'', program:[], formats:[], duration:'', levels:'', price_individual:'1,600,000 – 4,000,000 UZS/month', note:'' });
+  const [form, setForm] = useState(course || { category:'English', icon:'📚', title:'', description:'', audience:'', program:[], formats:[], duration:'', levels:'', price_individual:'1,600,000 – 4,000,000 UZS/month', note:'' });
   const [prog, setProg] = useState((form.program||[]).join('\n'));
   const [fmt, setFmt]   = useState((form.formats||[]).join('\n'));
   const [saving, setSaving] = useState(false);
@@ -110,6 +110,7 @@ function CourseForm({ course, onSave, onCancel, creds, t }) {
         </div>
         <div className="form-group span2"><label>Title</label><input value={form.title} onChange={e => setForm({...form,title:e.target.value})} /></div>
         <div className="form-group span2"><label>Description</label><textarea rows={3} value={form.description} onChange={e => setForm({...form,description:e.target.value})} /></div>
+        <div className="form-group span2"><label>Who it's for</label><input value={form.audience||''} onChange={e => setForm({...form,audience:e.target.value})} placeholder="e.g. Applicants to universities that ask for SAT results" /></div>
         <div className="form-group"><label>Duration</label><input value={form.duration} onChange={e => setForm({...form,duration:e.target.value})} placeholder="e.g. 3–6 months" /></div>
         <div className="form-group"><label>Levels</label><input value={form.levels} onChange={e => setForm({...form,levels:e.target.value})} placeholder="e.g. A1 – C2" /></div>
         <div className="form-group"><label>Price (Individual)</label><input value={form.price_individual} onChange={e => setForm({...form,price_individual:e.target.value})} /></div>

@@ -67,7 +67,7 @@ export default function Teachers() {
               </div>
             </div>
             <p className="modal-bio">{selected.full_bio}</p>
-            <div className="modal-tags-section"><h4>Certifications</h4><div className="modal-tags">{selected.certifications.map((c,i)=><span key={i} className="tag">{c}</span>)}</div></div>
+            <div className="modal-tags-section"><h4>{t('certifications')}</h4><div className="modal-tags">{selected.certifications.map((c,i)=><span key={i} className="tag">{c}</span>)}</div></div>
             {/* Achievements intentionally hidden until verified real data is entered via Admin panel — see backend/ARCHITECTURE.md */}
             <button className="btn-primary" onClick={() => { setSelected(null); window.location.href='/#apply'; }}>
               Book a Lesson with {selected.name.split(' ')[0]}

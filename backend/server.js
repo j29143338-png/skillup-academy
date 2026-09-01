@@ -60,7 +60,11 @@ setInterval(() => {
 
 function rateLimit(bucket, max, windowMs) {
   return (req, res, next) => {
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+    // req.ip resolves through the trusted proxy hops configured on the app
+    // (see "trust proxy" below). Reading X-Forwarded-For directly is not safe:
+    // a client can send its own value and rotate it to get a fresh bucket on
+    // every request, which defeats the limit entirely.
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
     const key = `${bucket}:${ip}`;
     const now = Date.now();
     const hits = (rateBuckets.get(key) || []).filter((t) => now - t < windowMs);
@@ -87,6 +91,13 @@ if (ALLOWED_ORIGINS.length === 0) {
 }
 
 const app = express();
+
+// Render (like most PaaS) puts exactly one proxy in front of the app. Trusting
+// that single hop makes req.ip the address the proxy actually saw, rather than
+// whatever the client claims in X-Forwarded-For. Override with TRUST_PROXY if
+// the deployment ever gains or loses a hop.
+app.set("trust proxy", Number(process.env.TRUST_PROXY ?? 1));
+
 app.use(
   cors(
     ALLOWED_ORIGINS.length
@@ -95,6 +106,34 @@ app.use(
   )
 );
 app.use(express.json({ limit: "5mb" }));
+
+// Every write is a read-modify-write of a single JSON row, so two mutating
+// requests running at once can both read the old value and the second save
+// silently discards the first (a lost application or review). Mutating requests
+// are rare and fast here, so serialising them is the simplest correct fix and
+// keeps each handler's load -> modify -> save sequence atomic.
+const WRITE_LOCK_TIMEOUT_MS = 15000;
+let writeChain = Promise.resolve();
+app.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+  writeChain = writeChain.then(
+    () =>
+      new Promise((resolve) => {
+        let done = false;
+        const release = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve();
+        };
+        // Safety valve: never let one stuck response block every later write.
+        const timer = setTimeout(release, WRITE_LOCK_TIMEOUT_MS);
+        res.on("finish", release);
+        res.on("close", release);
+        next();
+      })
+  );
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STORAGE LAYER
@@ -379,7 +418,7 @@ router.put("/admin/prices/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const idx = data.prices.findIndex((p) => p.id === id);
   if (idx === -1) return res.status(404).json({ detail: "Not found" });
-  data.prices[idx] = { ...data.prices[idx], ...req.body };
+  data.prices[idx] = { ...data.prices[idx], ...req.body, id };
   await saveData(data);
   res.json(data.prices[idx]);
 });
@@ -394,6 +433,7 @@ router.post("/admin/courses", requireAdmin, async (req, res) => {
     icon: body.icon || "📚",
     title: body.title || "",
     description: body.description || "",
+    audience: body.audience || "",
     program: body.program || [],
     formats: body.formats || [],
     duration: body.duration || "",
@@ -516,16 +556,32 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
-  res.status(500).json({ detail: "Internal server error: " + err.message });
+  // A malformed or oversized body is the caller's mistake, not a server fault.
+  if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
+    return res.status(400).json({ detail: "Invalid JSON body" });
+  }
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ detail: "Payload too large" });
+  }
+  // Never echo err.message: it can leak database, schema or filesystem detail.
+  res.status(500).json({ detail: "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`SkillUp Academy API running on port ${PORT}`);
-  console.log(`Storage mode: ${STORAGE_MODE}`);
-  ensureFutureTables().then(() => {
-    if (pool) console.log("Future-role schema ready (users/contracts/lesson_packages/schedule_slots/action_log)");
+// Only start listening when run directly, so maintenance scripts can require
+// this file for seedData() without booting a second server.
+if (require.main === module) startServer();
+
+function startServer() {
+  app.listen(PORT, () => {
+    console.log(`SkillUp Academy API running on port ${PORT}`);
+    console.log(`Storage mode: ${STORAGE_MODE}`);
+    ensureFutureTables().then(() => {
+      if (pool) console.log("Future-role schema ready (users/contracts/lesson_packages/schedule_slots/action_log)");
+    });
   });
-});
+}
+
+module.exports = { app, seedData, loadData, saveData };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SEED DATA
@@ -533,18 +589,19 @@ app.listen(PORT, () => {
 function seedData() {
   return {
     courses: [
-      { id:1,  category:"English", icon:"🌍", title:"General English",                    description:"Comprehensive English for all levels. Build fluency in speaking, writing, reading and listening.",       program:["Grammar A1–C2","Conversational fluency","Business English","Reading & writing","Listening comprehension"],                              formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"3–12 months",        levels:"A1 – C2",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:2,  category:"English", icon:"📊", title:"IELTS Preparation",                   description:"Targeted IELTS prep for band 6.5–8.0. Expert strategies across all four skills.",                       program:["Writing Task 1 & 2","Speaking Part 1–3","Reading techniques","Listening mastery","Mock tests & feedback"],             formats:["Group (4–6)","Individual","Intensive crash course"], duration:"2–6 months",         levels:"B1 – C1",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:3,  category:"English", icon:"🎯", title:"CEFR Preparation",                    description:"Official CEFR level certification prep A1–C2. Internationally recognised qualification.",               program:["CEFR level diagnostics","Level-specific grammar","Exam technique per level","Speaking & writing prep","Mock CEFR exams"],  formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"2–8 months",         levels:"A1 – C2",                teacher_ids:[1,2], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:4,  category:"Math",    icon:"📐", title:"Math in Russian",                     description:"Mathematics taught in Russian. School curriculum, olympiad prep, and university foundation.",            program:["Algebra & number theory","Geometry & trigonometry","Functions & calculus","Probability & statistics","Problem-solving"],    formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"3–12 months",        levels:"Grade 5 – 11",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:5,  category:"Math",    icon:"🏫", title:"Westminster Lyceum & University Prep", description:"Targeted preparation for Westminster Lyceum and Westminster University entrance exams.",                 program:["Westminster exam format","Math & English integrated prep","Critical thinking","Past paper practice","Interview preparation"], formats:["Group (4–6)","Individual","Intensive"],         duration:"3–6 months",         levels:"Grade 9 – 12",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:6,  category:"Math",    icon:"🎓", title:"SAT Math",                            description:"SAT Math prep covering Heart of Algebra, Advanced Math, and Data Analysis.",                            program:["Heart of Algebra","Advanced Math","Problem Solving & Data Analysis","Geometry","Calculator & No-Calculator sections"],       formats:["Group (4–6)","Individual"],                     duration:"3–6 months",         levels:"Grade 10–12",            teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:7,  category:"Math",    icon:"🏅", title:"Milliy Sertifikat",                   description:"Preparation for Uzbekistan's national certificate exam in Mathematics.",                                 program:["National curriculum review","Exam format & marking","Common question types","Speed & accuracy","Full mock exams"],           formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"2–6 months",         levels:"Grade 9 – 11",           teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:8,  category:"Math",    icon:"🔬", title:"CSCA — Math & Physics",               description:"Preparation for the Chinese Standard Certificate Assessment in Math and Physics.",                       program:["CSCA exam format","Advanced Mathematics","Physics problem-solving","Chinese academic terms","Mock exams"],                  formats:["Group (3–6)","Individual","Mini-group (2–3)"],  duration:"4–8 months",         levels:"Intermediate – Advanced",teacher_ids:[3,4], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
-      { id:9,  category:"Russian", icon:"🇷🇺",title:"Russian for Foreigners",              description:"Russian for non-native speakers — taught entirely in English.",                                         program:["Cyrillic & phonetics","Core grammar in English","Everyday conversation","Reading & writing","Russian culture"],             formats:["Individual only","Mini-group (2–3)"],           duration:"Flexible",           levels:"A1 – B2",                teacher_ids:[5],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
-      { id:10, category:"Uzbek",   icon:"🇺🇿",title:"Uzbek for Foreigners",               description:"Uzbek for non-native speakers — taught entirely in English.",                                           program:["Uzbek alphabet & pronunciation","Essential grammar in English","Daily conversation","Reading & writing","Culture"],           formats:["Individual only","Mini-group (2–3)"],           duration:"Flexible",           levels:"A1 – B1",                teacher_ids:[6],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
-      { id:11, category:"German",  icon:"🇩🇪",title:"German Language (A1 → C2)",          description:"German from zero to C2. Full Goethe Institut certificate preparation included.",                       program:["German phonetics & alphabet","Grammar A1–C2","Conversational German","Goethe exam strategies","Mock Goethe exams"],          formats:["Individual only","Mini-group (2–3)"],           duration:"6 months – 3 years", levels:"A1 – C2",                teacher_ids:[7],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Individual & mini-group only." },
-      { id:12, category:"Spanish", icon:"🇪🇸",title:"Spanish Language",                   description:"Spanish from beginner to advanced with expert instructors.",                                             program:["Spanish phonetics","Core grammar A1–C1","Conversational Spanish","Reading & writing","DELE/SIELE exam prep"],              formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"Flexible",           levels:"A1 – C1",                teacher_ids:[8],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:1,  category:"English", icon:"🌍", title:"General English",                    description:"Comprehensive English for all levels. Build fluency in speaking, writing, reading and listening.",       program:["Grammar A1–C2","Conversational fluency","Business English","Reading & writing","Listening comprehension"],                              formats:["Group (up to 4)","Individual","Mini-group (2)"],  duration:"3–12 months",        levels:"A1 – C2",                audience:"Anyone building everyday and working English, from beginner to confident fluency", teacher_ids:[1,2], price_individual:"2,500,000 UZS/month", note:"" },
+      { id:2,  category:"English", icon:"📊", title:"IELTS Preparation",                   description:"Targeted IELTS prep for band 6.5–8.0. Expert strategies across all four skills.",                       program:["Writing Task 1 & 2","Speaking Part 1–3","Reading techniques","Listening mastery","Mock tests & feedback"],             formats:["Group (up to 4)","Individual","Intensive crash course"], duration:"2–6 months",         levels:"B1 – C1",                audience:"Applicants to universities or immigration programmes that ask for an IELTS band", teacher_ids:[1,2], price_individual:"3,500,000 UZS/month", note:"" },
+      { id:3,  category:"English", icon:"🎯", title:"CEFR Preparation",                    description:"Official CEFR level certification prep A1–C2. Internationally recognised qualification.",               program:["CEFR level diagnostics","Level-specific grammar","Exam technique per level","Speaking & writing prep","Mock CEFR exams"],  formats:["Group (up to 4)","Individual","Mini-group (2)"],  duration:"2–8 months",         levels:"A1 – C2",                audience:"Those who need an official CEFR certificate for study or work", teacher_ids:[1,2], price_individual:"", note:"" },
+      { id:4,  category:"Math",    icon:"📐", title:"Math in Russian",                     description:"Mathematics taught in Russian. School curriculum, olympiad prep, and university foundation.",            program:["Algebra & number theory","Geometry & trigonometry","Functions & calculus","Probability & statistics","Problem-solving"],    formats:["Individual"],  duration:"3–12 months",        levels:"Grade 5 – 11",           audience:"School students taking maths in Russian — school syllabus, olympiads, university entry", teacher_ids:[3],   price_individual:"3,000,000 UZS/month", note:"" },
+      { id:5,  category:"Math",    icon:"🏫", title:"Westminster Lyceum & University Prep", description:"Targeted preparation for Westminster Lyceum and Westminster University entrance exams.",                 program:["Westminster exam format","Math & English integrated prep","Critical thinking","Past paper practice","Interview preparation"], formats:["Individual"],         duration:"3–6 months",         levels:"Grade 9 – 12",           audience:"Applicants to Westminster Lyceum and Westminster University", teacher_ids:[3],   price_individual:"4,000,000 UZS/month", note:"" },
+      { id:6,  category:"Math",    icon:"🎓", title:"SAT Math",                            description:"SAT Math prep covering Heart of Algebra, Advanced Math, and Data Analysis.",                            program:["Heart of Algebra","Advanced Math","Problem Solving & Data Analysis","Geometry","Calculator & No-Calculator sections"],       formats:["Individual"],                     duration:"3–6 months",         levels:"Grade 10–12",            audience:"Applicants to universities that ask for SAT results", teacher_ids:[3],   price_individual:"4,000,000 UZS/month", note:"" },
+      { id:7,  category:"Math",    icon:"🏅", title:"Milliy Sertifikat",                   description:"Preparation for Uzbekistan's national certificate exam in Mathematics.",                                 program:["National curriculum review","Exam format & marking","Common question types","Speed & accuracy","Full mock exams"],           formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"2–6 months",         levels:"Grade 9 – 11",           audience:"Those sitting Uzbekistan's national certificate exam in mathematics", teacher_ids:[3],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:8,  category:"Math",    icon:"🔬", title:"CSCA — Math & Physics",               description:"Preparation for the Chinese Standard Certificate Assessment in Math and Physics.",                       program:["CSCA exam format","Advanced Mathematics","Physics problem-solving","Chinese academic terms","Mock exams"],                  formats:["Group (3–6)","Individual","Mini-group (2–3)"],  duration:"4–8 months",         levels:"Intermediate – Advanced",audience:"Applicants preparing for the Chinese Standard Certificate Assessment in maths and physics", teacher_ids:[3,4], price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
+      { id:9,  category:"Russian", icon:"🇷🇺",title:"Russian for Foreigners",              description:"Russian for non-native speakers — taught entirely in English.",                                         program:["Cyrillic & phonetics","Core grammar in English","Everyday conversation","Reading & writing","Russian culture"],             formats:["Individual only","Mini-group (2)"],           duration:"Flexible",           levels:"A1 – B2",                audience:"Non-native speakers who want to learn Russian through English", teacher_ids:[5],   price_individual:"2,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
+      { id:10, category:"Uzbek",   icon:"🇺🇿",title:"Uzbek for Foreigners",               description:"Uzbek for non-native speakers — taught entirely in English.",                                           program:["Uzbek alphabet & pronunciation","Essential grammar in English","Daily conversation","Reading & writing","Culture"],           formats:["Individual only","Mini-group (2)"],           duration:"Flexible",           levels:"A1 – B1",                audience:"Expats and foreign professionals living or working in Uzbekistan", teacher_ids:[6],   price_individual:"2,000,000 UZS/month", note:"Taught in English. Individual & mini-group only." },
+      { id:11, category:"German",  icon:"🇩🇪",title:"German Language (A1 → C2)",          description:"German from zero to C2. Full Goethe Institut certificate preparation included.",                       program:["German phonetics & alphabet","Grammar A1–C2","Conversational German","Goethe exam strategies","Mock Goethe exams"],          formats:["Individual only","Mini-group (2–3)"],           duration:"6 months – 3 years", levels:"A1 – C2",                audience:"Those learning German from zero, including towards Goethe certification", teacher_ids:[7],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"Individual & mini-group only." },
+      { id:13, category:"English", icon:"📝", title:"TOEFL Preparation",                 description:"Preparation for the updated TOEFL iBT: four sections in under two hours, scored on the 1–6 band scale aligned to CEFR.", program:["Reading — adaptive section, academic passages and everyday texts","Listening — conversations, announcements and academic talks","Speaking — repetition and interview tasks","Writing — email, sentence building and academic discussion","Full mock tests with feedback on each section"],       formats:["Group (up to 4)","Individual","Mini-group (2)"], duration:"2–6 months",         levels:"B1 – C1",                audience:"Applicants to universities that accept TOEFL results", teacher_ids:[1,2], price_individual:"2,000,000 UZS/month", note:"Test updated in January 2026: results are reported on a 1–6 scale (band 4 corresponds to CEFR B2); the 0–120 score is also shown during the transition period." },
+      { id:12, category:"Spanish", icon:"🇪🇸",title:"Spanish Language",                   description:"Spanish from beginner to advanced with expert instructors.",                                             program:["Spanish phonetics","Core grammar A1–C1","Conversational Spanish","Reading & writing","DELE/SIELE exam prep"],              formats:["Group (4–8)","Individual","Mini-group (2–3)"],  duration:"Flexible",           levels:"A1 – C1",                audience:"Those learning Spanish from beginner level, including for DELE and SIELE", teacher_ids:[8],   price_individual:"1,600,000 – 4,000,000 UZS/month", note:"" },
     ],
     teachers: [
       { id:1, name:"Sarah Mitchell",   subject:"General English & IELTS",      experience:"8 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah&backgroundColor=b6e3f4",   short_bio:"Cambridge CELTA certified IELTS examiner with 8 years of experience.",              full_bio:"Sarah Mitchell holds an M.A. in Applied Linguistics from the University of Manchester. A certified IELTS examiner and Cambridge CELTA instructor, her students achieve average band improvements of 1.5 in just 3 months.", education:"M.A. Applied Linguistics, University of Manchester",        certifications:["Cambridge CELTA","IELTS Examiner","DELTA Module 1"],           achievements:["100+ students scored 7.0+ IELTS","Published IELTS prep guides","Former British Council teacher"] },
@@ -557,16 +614,18 @@ function seedData() {
       { id:8, name:"Isabella García",  subject:"Spanish Language",             experience:"6 years",  photo:"https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella&backgroundColor=fdcb6e", short_bio:"Native Spanish speaker from Madrid. DELE examiner with 6 years experience.",        full_bio:"Isabella García is a DELE examiner from Madrid. Her communicative teaching method delivers fast, real-world results from A1 to C1.",                                                                                       education:"B.A. Hispanic Philology, Complutense University of Madrid",         certifications:["DELE Examiner","SIELE Instructor","Instituto Cervantes Certified"],achievements:["100+ DELE exam passers","Full A1–C1 curriculum","Former Instituto Cervantes teacher"] },
     ],
     prices: [
-      { id:1,  course:"General English",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:"600,000 UZS/month" },
-      { id:2,  course:"IELTS Preparation",       individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
-      { id:3,  course:"CEFR Preparation",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,000,000 UZS/month", group:"650,000 UZS/month" },
-      { id:4,  course:"Math in Russian",         individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:"600,000 UZS/month" },
-      { id:5,  course:"Westminster Prep",        individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
-      { id:6,  course:"SAT Math",                individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,100,000 UZS/month", group:"700,000 UZS/month" },
+      { id:1,  course:"General English",        individual:"2,500,000 UZS/month", mini_group:"2,000,000 UZS/month", group:"1,200,000 UZS/month" },
+      { id:2,  course:"IELTS Preparation",       individual:"3,500,000 UZS/month", mini_group:"3,000,000 UZS/month", group:"1,500,000 UZS/month" },
+      { id:3,  course:"CEFR Preparation",        individual:null,                  mini_group:null,                  group:"1,200,000 UZS/month" },
+      { id:13, course:"TOEFL Preparation",       individual:"2,000,000 UZS/month", mini_group:"1,800,000 UZS/month", group:"1,200,000 UZS/month" },
+      { id:4,  course:"Math in Russian",         individual:"3,000,000 UZS/month", mini_group:null,                  group:null },
+      { id:5,  course:"Westminster Prep",        individual:"4,000,000 UZS/month", mini_group:null,                  group:null },
+      { id:6,  course:"SAT — Math",              individual:"4,000,000 UZS/month", mini_group:null,                  group:null },
+      { id:14, course:"SAT — Math & English",    individual:"4,600,000 UZS/month", mini_group:null,                  group:null },
+      { id:9,  course:"Russian for Foreigners",  individual:"2,000,000 UZS/month", mini_group:"1,800,000 UZS/month", group:null },
+      { id:10, course:"Uzbek for Foreigners",    individual:"2,000,000 UZS/month", mini_group:"1,800,000 UZS/month", group:null },
       { id:7,  course:"Milliy Sertifikat",       individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:"580,000 UZS/month" },
       { id:8,  course:"CSCA Math & Physics",     individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"1,050,000 UZS/month", group:"680,000 UZS/month" },
-      { id:9,  course:"Russian for Foreigners",  individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:null },
-      { id:10, course:"Uzbek for Foreigners",    individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"900,000 UZS/month",   group:null },
       { id:11, course:"German (A1–C2)",          individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:null },
       { id:12, course:"Spanish",                 individual:"1,600,000 – 4,000,000 UZS/month", mini_group:"950,000 UZS/month",   group:"620,000 UZS/month" },
     ],

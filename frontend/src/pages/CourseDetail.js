@@ -25,22 +25,25 @@ export default function CourseDetail() {
       <div className="cd-hero">
         <div className="cd-hero-bg" />
         <div className="container">
-          <button className="back-btn" onClick={() => navigate('/courses')}>← {t('back_courses')}</button>
+          <button className="back-btn" onClick={() => navigate('/courses')}>{t('back_courses')}</button>
           <div className="cd-hero-content">
             <span className="cd-icon">{course.icon}</span>
             <div>
               <div className="cd-cat-label">{course.category}</div>
               <h1>{course.title}</h1>
               <p className="cd-desc">{course.description}</p>
+              {course.audience && (
+                <div className="cd-audience"><strong>{t('for_whom')}</strong> {course.audience}</div>
+              )}
               {course.note && <div className="cd-note-hero">📌 {course.note}</div>}
             </div>
           </div>
           <div className="cd-meta-bar">
-            <div className="cd-meta-item"><span>⏱</span><div><strong>Duration</strong><p>{course.duration}</p></div></div>
-            <div className="cd-meta-item"><span>📚</span><div><strong>Levels</strong><p>{course.levels}</p></div></div>
-            <div className="cd-meta-item"><span>👥</span><div><strong>Formats</strong><p>{course.formats?.join(', ')}</p></div></div>
+            <div className="cd-meta-item"><span>⏱</span><div><strong>{t('cd_duration')}</strong><p>{course.duration}</p></div></div>
+            <div className="cd-meta-item"><span>📚</span><div><strong>{t('cd_levels')}</strong><p>{course.levels}</p></div></div>
+            <div className="cd-meta-item"><span>👥</span><div><strong>{t('cd_formats')}</strong><p>{course.formats?.join(', ')}</p></div></div>
             {course.price_individual && (
-              <div className="cd-meta-item"><span>💰</span><div><strong>Individual</strong><p>{course.price_individual}</p></div></div>
+              <div className="cd-meta-item"><span>💰</span><div><strong>{t('cd_individual')}</strong><p>{course.price_individual}</p></div></div>
             )}
           </div>
         </div>
@@ -76,7 +79,7 @@ export default function CourseDetail() {
           <div className="cd-sidebar">
             <div className="cd-cta-box">
               <h3>{t('ready_start')}</h3>
-              <p>Enroll now or book a free trial lesson to experience the course.</p>
+              <p>{t('cd_enroll_note')}</p>
               <button className="btn-primary full-width" onClick={() => { navigate('/'); setTimeout(() => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' }), 300); }}>
                 {t('enroll_in')} {course.title}
               </button>
@@ -88,7 +91,7 @@ export default function CourseDetail() {
                 {course.teachers.map(tc => (
                   <div key={tc.id} className="cd-teacher-row" onClick={() => navigate('/teachers')}>
                     <img src={tc.photo} alt={tc.name} className="cd-teacher-photo" />
-                    <div><strong>{tc.name}</strong><p>{tc.experience} exp.</p></div>
+                    <div><strong>{tc.name}</strong><p>{tc.experience} {t('exp_label')}</p></div>
                   </div>
                 ))}
               </div>

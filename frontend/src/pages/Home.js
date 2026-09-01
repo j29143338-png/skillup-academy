@@ -95,18 +95,20 @@ export default function Home() {
   };
 
   const WHY = [
-    { icon: '🎯', title: t('why1_title'), desc: t('why1_desc') },
-    { icon: '👨‍🏫', title: t('why2_title'), desc: t('why2_desc') },
-    { icon: '📱', title: t('why3_title'), desc: t('why3_desc') },
-    { icon: '📊', title: t('why4_title'), desc: t('why4_desc') },
-    { icon: '🌍', title: t('why5_title'), desc: t('why5_desc') },
-    { icon: '💬', title: t('why6_title'), desc: t('why6_desc') },
+    { icon: '👨‍🏫', title: t('why1_title'), desc: t('why1_desc') },
+    { icon: '🎯', title: t('why2_title'), desc: t('why2_desc') },
+    { icon: '💡', title: t('why3_title'), desc: t('why3_desc') },
+    { icon: '🧭', title: t('why4_title'), desc: t('why4_desc') },
+    { icon: '📊', title: t('why5_title'), desc: t('why5_desc') },
+    { icon: '🤝', title: t('why6_title'), desc: t('why6_desc') },
+    { icon: '📱', title: t('why7_title'), desc: t('why7_desc') },
   ];
+  const TRIAL = [1, 2, 3, 4, 5].map((n) => t(`trial${n}`));
   const STATS = [
     { num: '600+', label: t('stat1') },
     { num: '96%', label: t('stat2') },
-    { num: '8', label: t('stat3') },
-    { num: '12', label: t('stat4') },
+    { num: teachers.length ? `${teachers.length}` : '—', label: t('stat3') },
+    { num: courses.length ? `${courses.length}` : '—', label: t('stat4') },
   ];
 
   return (
@@ -161,7 +163,7 @@ export default function Home() {
                     <span>⏱ {c.duration}</span>
                     <span>📚 {c.levels}</span>
                   </div>
-                  <div className="course-cta">Learn More →</div>
+                  <div className="course-cta">{t('learn_more')}</div>
                 </TiltCard>
               </AnimSection>
             ))}
@@ -186,7 +188,7 @@ export default function Home() {
                     <p className="thc-subject">{teacher.subject}</p>
                     <p className="thc-exp">🏆 {teacher.experience}</p>
                     <p className="thc-bio">{teacher.short_bio}</p>
-                    <span className="thc-link">View profile →</span>
+                    <span className="thc-link">{t('view_profile')}</span>
                   </div>
                 </TiltCard>
               </AnimSection>
@@ -290,6 +292,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* TRIAL LESSON — what the brief asks us to spell out before the form */}
+      <section className="section bg-white">
+        <div className="container">
+          <AnimSection>
+            <div className="section-header">
+              <span className="section-tag">{t('trial_tag')}</span>
+              <h2>{t('trial_title')}</h2>
+              <p>{t('trial_subtitle')}</p>
+            </div>
+          </AnimSection>
+          <div className="trial-grid">
+            {TRIAL.map((item, i) => (
+              <AnimSection key={i}>
+                <div className="trial-card">
+                  <span className="trial-num">{String(i + 1).padStart(2, '0')}</span>
+                  <p>{item}</p>
+                </div>
+              </AnimSection>
+            ))}
+          </div>
+          <div className="section-cta">
+            <button className="btn-primary" onClick={() => scrollToApply('trial')}>{t('hero_btn1')}</button>
+          </div>
+        </div>
+      </section>
+
       {/* APPLY FORM */}
       <section className="section bg-offwhite" id="apply">
         <div className="container">
@@ -353,7 +381,7 @@ export default function Home() {
               </div>
             </div>
             <p className="modal-bio">{selectedTeacher.full_bio}</p>
-            <div className="modal-tags-section"><h4>Certifications</h4><div className="modal-tags">{selectedTeacher.certifications.map((c,i) => <span key={i} className="tag">{c}</span>)}</div></div>
+            <div className="modal-tags-section"><h4>{t('certifications')}</h4><div className="modal-tags">{selectedTeacher.certifications.map((c,i) => <span key={i} className="tag">{c}</span>)}</div></div>
             {/* Achievements intentionally hidden until verified real data is entered via Admin panel — see backend/ARCHITECTURE.md */}
             <button className="btn-primary" onClick={() => { setSelectedTeacher(null); document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' }); }}>
               {t('enroll_in')} {selectedTeacher.name.split(' ')[0]}
