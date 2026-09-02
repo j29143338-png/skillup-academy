@@ -1,0 +1,4 @@
+# React Router: serve index.html for every page route.
+# netlify.toml covers Git-based deploys; this file ships inside build/ so a
+# manual folder upload gets the same rule.
+/*  /index.html  200
