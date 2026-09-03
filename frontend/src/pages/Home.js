@@ -437,7 +437,7 @@ export default function Home() {
             <div className="modal-tags-section"><h4>{t('certifications')}</h4><div className="modal-tags">{selectedTeacher.certifications.map((c,i) => <span key={i} className="tag">{c}</span>)}</div></div>
             {/* Achievements intentionally hidden until verified real data is entered via Admin panel — see backend/ARCHITECTURE.md */}
             <button className="btn-primary" onClick={() => { setSelectedTeacher(null); document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' }); }}>
-              {t('enroll_in')} {selectedTeacher.name.split(' ')[0]}
+              {t('enroll_with', { name: selectedTeacher.name.split(' ')[0] })}
             </button>
           </div>
         </div>

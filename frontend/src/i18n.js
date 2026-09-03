@@ -15,7 +15,7 @@ export const translations = {
     hero_subtitle: "Expert-led courses in English, Math, Russian, Uzbek, German & Spanish. From IELTS to Westminster — your goals, our expertise.",
     stat1: "Students Enrolled",
     stat2: "Success Rate",
-    stat3: "Expert Teachers",
+    stat3: "Teachers",
     stat4: "Courses Offered",
 
     // Sections
@@ -76,7 +76,7 @@ export const translations = {
     cd_formats: "Formats",
     cd_individual: "Individual",
     cd_enroll_note: "Enrol now, or start with a free trial lesson to try the course first.",
-    exp_label: "experience",
+    exp_years: "{n} years of experience",
 
     // Form
     your_name: "Your Name *",
@@ -94,7 +94,8 @@ export const translations = {
     course_program: "Course Program",
     learning_formats: "Learning Formats",
     ready_start: "Ready to Start?",
-    enroll_in: "Enroll in",
+    enroll_in: "Enrol in {name}",
+    enroll_with: "Enrol with {name}",
     free_trial: "✓ Free trial lesson included",
     your_teachers: "Your Teachers",
 
@@ -267,7 +268,7 @@ export const translations = {
     hero_subtitle: "Экспертные курсы по английскому, математике, русскому, узбекскому, немецкому и испанскому. От IELTS до Westminster — ваши цели, наша экспертиза.",
     stat1: "Студентов обучено",
     stat2: "Успеваемость",
-    stat3: "Экспертов-учителей",
+    stat3: "Преподавателей",
     stat4: "Курсов",
     what_we_teach: "Что мы преподаём",
     our_courses: "Наши курсы",
@@ -322,7 +323,9 @@ export const translations = {
     cd_formats: "Форматы",
     cd_individual: "Индивидуально",
     cd_enroll_note: "Запишитесь или начните с бесплатного пробного урока, чтобы сначала попробовать курс.",
-    exp_label: "опыта",
+    exp_years_one: "{n} год опыта",
+    exp_years_few: "{n} года опыта",
+    exp_years_many: "{n} лет опыта",
     your_name: "Ваше имя *",
     phone_number: "Телефон *",
     select_course: "Выберите курс",
@@ -336,7 +339,8 @@ export const translations = {
     course_program: "Программа курса",
     learning_formats: "Форматы обучения",
     ready_start: "Готовы начать?",
-    enroll_in: "Записаться на",
+    enroll_in: "Записаться на {name}",
+    enroll_with: "Записаться к {name}",
     free_trial: "✓ Бесплатный пробный урок",
     your_teachers: "Ваши преподаватели",
     transparent: "Прозрачные цены",
@@ -350,7 +354,7 @@ export const translations = {
     indiv_desc: "1-на-1",
     popular: "Популярно",
     not_available: "Недоступно",
-    note_ru_de_title: "Русский, узбекский и немецкий",
+    note_ru_de_title: "Русский, немецкий и узбекский",
     note_ru_de: "Русский, немецкий и узбекский доступны только в индивидуальном и мини-групповом формате.",
     note_trial_title: "Бесплатный пробный урок",
     note_trial: "Бесплатный пробный урок для всех курсов.",
@@ -503,7 +507,7 @@ export const translations = {
     hero_subtitle: "Ingliz, matematika, rus, o'zbek, nemis va ispan tillarida ekspert darslar. IELTSdan Westminstergacha — sizning maqsadingiz, bizning tajribamiz.",
     stat1: "O'quvchilar",
     stat2: "Muvaffaqiyat darajasi",
-    stat3: "Ekspert o'qituvchilar",
+    stat3: "O'qituvchilar",
     stat4: "Kurslar",
     what_we_teach: "Nima o'rgatamiz",
     our_courses: "Bizning kurslar",
@@ -558,7 +562,7 @@ export const translations = {
     cd_formats: "Formatlar",
     cd_individual: "Individual",
     cd_enroll_note: "Yoziling yoki kursni sinab ko'rish uchun bepul sinov darsidan boshlang.",
-    exp_label: "tajriba",
+    exp_years: "{n} yillik tajriba",
     your_name: "Ismingiz *",
     phone_number: "Telefon raqami *",
     select_course: "Kursni tanlang",
@@ -572,7 +576,8 @@ export const translations = {
     course_program: "Kurs dasturi",
     learning_formats: "O'qish formatlari",
     ready_start: "Boshlashga tayyormisiz?",
-    enroll_in: "Ro'yxatdan o'tish:",
+    enroll_in: "{name} kursiga yozilish",
+    enroll_with: "{name} bilan yozilish",
     free_trial: "✓ Bepul sinov darsi kiritilgan",
     your_teachers: "Sizning o'qituvchilaringiz",
     transparent: "Shaffof narxlar",
@@ -727,4 +732,11 @@ export const translations = {
   }
 };
 
-export const useT = (lang) => (key) => translations[lang]?.[key] || translations.en[key] || key;
+export const useT = (lang) => (key, vars) => {
+  const text = translations[lang]?.[key] ?? translations.en[key] ?? key;
+  if (!vars) return text;
+  return Object.keys(vars).reduce(
+    (out, name) => out.split('{' + name + '}').join(vars[name]),
+    text
+  );
+};

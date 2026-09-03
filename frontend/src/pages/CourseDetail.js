@@ -5,10 +5,26 @@ import { useLang } from '../context/LangContext';
 import { useSEO } from '../hooks/useSEO';
 import './CourseDetail.css';
 
+// Teacher experience is stored as free text in English ("8 years"), because
+// that is what the admin panel accepts. Pull the number out and let each
+// language supply its own wording, so a Russian page never reads
+// "8 years опыта". Anything without a number is shown as entered.
+function formatExperience(value, t, lang) {
+  const years = String(value ?? '').match(/d+/);
+  if (!years) return value;
+  const n = Number(years[0]);
+  if (lang !== 'ru') return t('exp_years', { n });
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return t('exp_years_one', { n });
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return t('exp_years_few', { n });
+  return t('exp_years_many', { n });
+}
+
 export default function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   useSEO(course?.title, course?.description);
@@ -81,7 +97,7 @@ export default function CourseDetail() {
               <h3>{t('ready_start')}</h3>
               <p>{t('cd_enroll_note')}</p>
               <button className="btn-primary full-width" onClick={() => { navigate('/'); setTimeout(() => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' }), 300); }}>
-                {t('enroll_in')} {course.title}
+                {t('enroll_in', { name: course.title })}
               </button>
               <div className="cta-note">{t('free_trial')}</div>
             </div>
@@ -91,7 +107,7 @@ export default function CourseDetail() {
                 {course.teachers.map(tc => (
                   <div key={tc.id} className="cd-teacher-row" onClick={() => navigate('/teachers')}>
                     <img src={tc.photo} alt={tc.name} className="cd-teacher-photo" />
-                    <div><strong>{tc.name}</strong><p>{tc.experience} {t('exp_label')}</p></div>
+                    <div><strong>{tc.name}</strong><p>{formatExperience(tc.experience, t, lang)}</p></div>
                   </div>
                 ))}
               </div>
