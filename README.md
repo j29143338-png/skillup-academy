@@ -186,6 +186,35 @@ npm start
 
 Visit `http://localhost:3000`
 
+### Sharing one database between machines
+
+By default a local backend keeps its own `backend/data.json`, so applications
+and feedbacks entered on one computer never appear on the other. Point both at
+the live PostgreSQL instance to work against the same data:
+
+1. Render dashboard → `skillup-academy-db` → **Connections** → copy the
+   **External Database URL**. The internal URL only resolves inside Render's
+   network and times out from home.
+2. `cd backend && cp .env.example .env`
+3. Put the string in `.env` as `DATABASE_URL=...`
+
+`backend/.env` is gitignored, so the credentials stay on the machine. Restart
+the backend and the startup line should read:
+
+```
+Storage mode: PostgreSQL (persistent)
+```
+
+Anything else means the variable was not picked up and you are still on the
+local file.
+
+> ⚠️ **This is the live database.** A local server pointed at it reads and
+> writes the same rows the public site uses. Applications sent by real visitors
+> are in there, and anything you change locally — including through the admin
+> panel — is immediately live. For experiments, leave `DATABASE_URL` unset and
+> stay on the local file, or create a second free database on Render and point
+> `.env` at that instead.
+
 ### Working across two computers
 
 The catalogue — courses, teachers, prices, testimonials — lives in `seedData()`

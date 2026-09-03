@@ -13,6 +13,13 @@
  *     ADMIN_PASSWORD (plaintext) is a dev-only fallback and logs a warning.
  */
 
+// Reads backend/.env when present, so local runs can pick up DATABASE_URL and
+// the admin credentials without exporting them by hand every session. The file
+// is gitignored and never leaves the machine. On Render there is no .env and
+// the real environment variables are used, so this is a no-op there.
+// `quiet` suppresses the banner dotenv v17 prints on every start.
+require("dotenv").config({ path: require("path").join(__dirname, ".env"), quiet: true });
+
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -177,7 +184,9 @@ const SEEDED_COLLECTIONS = ["courses", "teachers", "prices", "testimonials"];
 // Returns the data to store when `stored` is behind the current seed, or null
 // when it is already current and nothing needs writing.
 function withCurrentSeed(stored) {
-  if (stored && stored._seedVersion === SEED_VERSION) return null;
+  // Only ever move forward. A developer running an older checkout against the
+  // shared database must not drag the catalogue back to their seed.
+  if (stored && Number(stored._seedVersion) >= SEED_VERSION) return null;
   const seeded = seedData();
   const next = { ...seeded, ...stored };
   for (const key of SEEDED_COLLECTIONS) next[key] = seeded[key];
