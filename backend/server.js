@@ -153,6 +153,38 @@ if (DATABASE_URL) {
 
 const LOCAL_FILE = path.join(__dirname, "data.json");
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SEED VERSIONING
+// seedData() used to run only when storage was empty; after that the stored
+// copy always won. That left every environment stranded on whatever the
+// catalogue looked like the first time it started — a second dev machine with
+// an older data.json, and the production database, both kept serving stale
+// courses while the code moved on, with no sign anything was wrong.
+//
+// Stamping the stored blob with the seed version lets each environment notice
+// it is behind and pull the catalogue forward on the next request.
+//
+// BUMP SEED_VERSION whenever the catalogue inside seedData() changes,
+// otherwise the change reaches nobody who already has data.
+// ─────────────────────────────────────────────────────────────────────────────
+const SEED_VERSION = 2;
+
+// The collections seedData owns and may overwrite. Everything else is left
+// exactly as stored: applications and feedbacks sent by visitors, and results
+// entered through the admin panel, are never touched by a refresh.
+const SEEDED_COLLECTIONS = ["courses", "teachers", "prices", "testimonials"];
+
+// Returns the data to store when `stored` is behind the current seed, or null
+// when it is already current and nothing needs writing.
+function withCurrentSeed(stored) {
+  if (stored && stored._seedVersion === SEED_VERSION) return null;
+  const seeded = seedData();
+  const next = { ...seeded, ...stored };
+  for (const key of SEEDED_COLLECTIONS) next[key] = seeded[key];
+  next._seedVersion = SEED_VERSION;
+  return next;
+}
+
 async function ensureTable() {
   if (!pool) return;
   await pool.query(`
@@ -222,20 +254,31 @@ async function loadData() {
   if (pool) {
     await ensureTable();
     const res = await pool.query("SELECT data FROM skillup_data WHERE id = 1");
-    if (res.rows.length > 0) return res.rows[0].data;
-    const seeded = seedData();
+    if (res.rows.length > 0) {
+      const refreshed = withCurrentSeed(res.rows[0].data);
+      if (!refreshed) return res.rows[0].data;
+      await pool.query("UPDATE skillup_data SET data = $1 WHERE id = 1", [refreshed]);
+      console.log(`Catalogue refreshed to seed version ${SEED_VERSION}`);
+      return refreshed;
+    }
+    const seeded = withCurrentSeed(null);
     await pool.query("INSERT INTO skillup_data (id, data) VALUES (1, $1)", [seeded]);
     return seeded;
   }
   // Local file fallback
   if (fs.existsSync(LOCAL_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));
+      const stored = JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));
+      const refreshed = withCurrentSeed(stored);
+      if (!refreshed) return stored;
+      fs.writeFileSync(LOCAL_FILE, JSON.stringify(refreshed, null, 2));
+      console.log(`Catalogue refreshed to seed version ${SEED_VERSION}`);
+      return refreshed;
     } catch (e) {
       console.error("Failed to parse local data.json, reseeding:", e.message);
     }
   }
-  const seeded = seedData();
+  const seeded = withCurrentSeed(null);
   fs.writeFileSync(LOCAL_FILE, JSON.stringify(seeded, null, 2));
   return seeded;
 }

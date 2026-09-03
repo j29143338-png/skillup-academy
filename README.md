@@ -185,3 +185,32 @@ npm start
 ```
 
 Visit `http://localhost:3000`
+
+### Working across two computers
+
+The catalogue — courses, teachers, prices, testimonials — lives in `seedData()`
+in `backend/server.js`, and that is the only copy tracked in git. Each machine
+keeps its own `backend/data.json` (gitignored), and production keeps its own row
+in PostgreSQL.
+
+Those stored copies used to win forever: whatever the catalogue looked like the
+first time an environment started, it kept serving, even after the code changed.
+A second computer would pull new code and still show the old courses.
+
+`SEED_VERSION` in `backend/server.js` fixes that. The stored data carries the
+version it was written with, and any environment that is behind refreshes the
+catalogue on the next request and logs `Catalogue refreshed to seed version N`.
+Applications, feedbacks and results are never touched by a refresh.
+
+**When you change the catalogue in `seedData()`, bump `SEED_VERSION`.** Without
+the bump the change reaches nobody who already has data — not the other
+computer, not the live site.
+
+So the routine on the second computer stays just:
+
+```bash
+git pull
+cd backend && npm start
+```
+
+The catalogue catches up by itself on the first request.
