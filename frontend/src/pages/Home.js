@@ -175,8 +175,7 @@ export default function Home() {
         </div>
         <div className="container hero-content">
           <div className="hero-badge animate-fadeUp">✦ {t('hero_badge')}</div>
-          <CertificateCard band="8.0" side="left" />
-          <CertificateCard band="7.0" side="right" />
+          <CertificateCard band="8.0" side="right" />
           <h1 className="hero-title hero-title-3d">
             <HeroWords text={t('hero_title1')} startDelay={0.12} />
             <HeroWords text={t('hero_title2')} className="hero-accent" startDelay={0.34} />
