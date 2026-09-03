@@ -4,6 +4,12 @@ import './Intro.css';
 // Plays once per tab. Someone moving between pages should not sit through it
 // again, and neither should anyone coming back with the back button.
 const SEEN_KEY = 'skillup_intro_seen';
+
+// True only when the tab was opened on the home page. Without this, clicking
+// "Главная" from, say, the FAQ dropped a full-screen splash on top of someone
+// already browsing the site.
+const ENTERED_ON_HOME =
+  typeof window === 'undefined' || window.location.pathname === '/';
 const HOLD_MS = 2300;
 const FADE_MS = 900;
 
@@ -37,7 +43,7 @@ const prefersReducedMotion = () =>
 export default function Intro() {
   const forced = introParam();
   const [state, setState] = useState(() =>
-    (!forced && alreadySeen()) || prefersReducedMotion() ? 'done' : 'playing'
+    (!forced && (alreadySeen() || !ENTERED_ON_HOME)) || prefersReducedMotion() ? 'done' : 'playing'
   );
   const sceneRef = useRef(null);
   const finishTimer = useRef(null);
@@ -45,7 +51,7 @@ export default function Intro() {
   // Scheduled once on mount rather than keyed on `state`, so a re-render can
   // never tear the timers down and restart them mid-sequence.
   useEffect(() => {
-    if ((!forced && alreadySeen()) || prefersReducedMotion()) return undefined;
+    if ((!forced && (alreadySeen() || !ENTERED_ON_HOME)) || prefersReducedMotion()) return undefined;
 
     document.body.classList.add('intro-locked');
     if (forced === 'hold') {

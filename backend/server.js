@@ -555,14 +555,17 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  // A malformed or oversized body is the caller's mistake, not a server fault.
+  // A malformed or oversized body is the caller's mistake, not a server fault,
+  // so it is logged as a note rather than filed under server errors.
   if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
+    console.warn("Rejected a malformed JSON body from", req.ip);
     return res.status(400).json({ detail: "Invalid JSON body" });
   }
   if (err.type === "entity.too.large") {
+    console.warn("Rejected an oversized body from", req.ip);
     return res.status(413).json({ detail: "Payload too large" });
   }
+  console.error("Unhandled error:", err);
   // Never echo err.message: it can leak database, schema or filesystem detail.
   res.status(500).json({ detail: "Internal server error" });
 });

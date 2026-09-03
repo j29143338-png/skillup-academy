@@ -32,7 +32,6 @@ export const translations = {
     what_students_say: "What Our Students Say",
     get_started: "Get Started",
     ready_to: "Ready to SkillUp?",
-    apply_subtitle: "Fill in your details and we'll reach out within 24 hours to discuss the best course for you.",
     view_all: "View All Courses",
     all_teachers: "All Teachers →",
 
@@ -283,7 +282,6 @@ export const translations = {
     what_students_say: "Что говорят наши студенты",
     get_started: "Начать",
     ready_to: "Готовы к SkillUp?",
-    apply_subtitle: "Оставьте заявку и мы свяжемся с вами в течение 24 часов.",
     view_all: "Все курсы",
     all_teachers: "Все преподаватели →",
     why1_title: "Квалифицированные преподаватели",
@@ -520,7 +518,6 @@ export const translations = {
     what_students_say: "O'quvchilarimiz nima deydi",
     get_started: "Boshlash",
     ready_to: "SkillUpga tayyormisiz?",
-    apply_subtitle: "Ma'lumotlaringizni kiriting, 24 soat ichida siz bilan bog'lanamiz.",
     view_all: "Barcha kurslar",
     all_teachers: "Barcha o'qituvchilar →",
     why1_title: "Malakali o'qituvchilar",
