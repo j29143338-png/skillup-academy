@@ -35,7 +35,7 @@ export default function Navbar() {
               <path d="M12 22H28" stroke="#F5820A" strokeWidth="4" strokeLinecap="round"/>
             </svg>
           </div>
-          <div className="logo-text">
+          <div className="logo-text notranslate" translate="no">
             <span className="logo-main">SkillUp</span>
             <span className="logo-sub">Academy</span>
           </div>

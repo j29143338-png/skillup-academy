@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCourses, getTeachers, getTestimonials, getResults, submitApplication } from '../api';
 import { useLang } from '../context/LangContext';
+import { tCourse, tTeacher, tExperience } from '../contentI18n';
 import { useSEO } from '../hooks/useSEO';
 import './Home.css';
 
@@ -98,7 +99,7 @@ const catColor = { English:'#2563EB', Math:'#059669', Russian:'#DC2626', Uzbek:'
 const emptyForm = { name: '', phone: '', age: '', telegram: '', course: '', format: '', days: '', time: '', message: '', purpose: 'trial' };
 
 export default function Home() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   useSEO(t('hero_title1') + ' ' + t('hero_title2'), t('hero_subtitle'));
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -117,6 +118,14 @@ export default function Home() {
     getTestimonials().then(setTestimonials).catch(() => {});
     getResults().then(setResults).catch(() => {});
   }, []);
+
+  // The records arrive in English; translate them once here so the cards, the
+  // profile modal and the course dropdown all read in one language. The English
+  // title is kept alongside as `enTitle`, because that is the value the
+  // application form submits and the admin panel expects to see.
+  const localisedCourses = courses.map(c => ({ ...tCourse(c, lang), enTitle: c.title }));
+  const localisedTeachers = teachers.map(x => tTeacher(x, lang));
+  const openTeacher = selectedTeacher ? tTeacher(selectedTeacher, lang) : null;
 
   const scrollToApply = (purpose) => {
     setFormData((f) => ({ ...f, purpose }));
@@ -176,7 +185,7 @@ export default function Home() {
         <div className="container hero-content">
           <div className="hero-badge animate-fadeUp">✦ {t('hero_badge')}</div>
           <CertificateCard band="8.0" side="right" />
-          <h1 className="hero-title hero-title-3d">
+          <h1 className="hero-title hero-title-3d notranslate" translate="no">
             <HeroWords text={t('hero_title1')} startDelay={0.12} />
             <HeroWords text={t('hero_title2')} className="hero-accent" startDelay={0.34} />
           </h1>
@@ -202,12 +211,12 @@ export default function Home() {
         <div className="container">
           <AnimSection><div className="section-header"><span className="section-tag">{t('what_we_teach')}</span><h2>{t('our_courses')}</h2><p>{t('courses_subtitle')}</p></div></AnimSection>
           <div className="courses-grid">
-            {courses.map((c) => (
+            {localisedCourses.map((c) => (
               <AnimSection key={c.id}>
                 <TiltCard className="course-card" onClick={() => navigate(`/courses/${c.id}`)} style={{ '--cat': catColor[c.category] || '#2563EB' }}>
                   <div className="course-card-top">
                     <span className="course-icon-big">{c.icon}</span>
-                    <span className="course-cat-badge" style={{ color: catColor[c.category], background: `${catColor[c.category]}15` }}>{c.category}</span>
+                    <span className="course-cat-badge" style={{ color: catColor[c.category], background: `${catColor[c.category]}15` }}>{c.categoryLabel}</span>
                   </div>
                   <h3 className="course-title">{c.title}</h3>
                   <p className="course-desc">{c.description.substring(0, 95)}...</p>
@@ -230,7 +239,7 @@ export default function Home() {
         <div className="container">
           <AnimSection><div className="section-header"><span className="section-tag blue">{t('who_teaches')}</span><h2>{t('meet_teachers')}</h2><p>{t('teachers_subtitle')}</p></div></AnimSection>
           <div className="teachers-grid-home">
-            {teachers.slice(0, 4).map(teacher => (
+            {localisedTeachers.slice(0, 4).map(teacher => (
               <AnimSection key={teacher.id}>
                 <TiltCard className="teacher-home-card" onClick={() => setSelectedTeacher(teacher)} maxDeg={4}>
                   <div className="thc-img-wrap">
@@ -239,7 +248,7 @@ export default function Home() {
                   <div className="thc-body">
                     <h3>{teacher.name}</h3>
                     <p className="thc-subject">{teacher.subject}</p>
-                    <p className="thc-exp">🏆 {teacher.experience}</p>
+                    <p className="thc-exp">🏆 {tExperience(teacher.experience, t, lang)}</p>
                     <p className="thc-bio">{teacher.short_bio}</p>
                     <span className="thc-link">{t('view_profile')}</span>
                   </div>
@@ -395,7 +404,7 @@ export default function Home() {
               <div className="form-group"><label>{t('select_course')}</label>
                 <select value={formData.course} onChange={e => setFormData({ ...formData, course: e.target.value })}>
                   <option value="">{t('select_course')}</option>
-                  {courses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+                  {localisedCourses.map(c => <option key={c.id} value={c.enTitle}>{c.title}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -420,24 +429,24 @@ export default function Home() {
       </section>
 
       {/* TEACHER MODAL */}
-      {selectedTeacher && (
+      {openTeacher && (
         <div className="modal-overlay" onClick={() => setSelectedTeacher(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setSelectedTeacher(null)}>✕</button>
             <div className="modal-teacher-header">
-              <img src={selectedTeacher.photo} alt={selectedTeacher.name} className="modal-teacher-photo" loading="lazy" />
+              <img src={openTeacher.photo} alt={openTeacher.name} className="modal-teacher-photo" loading="lazy" />
               <div>
-                <h2>{selectedTeacher.name}</h2>
-                <p className="modal-subject">{selectedTeacher.subject}</p>
-                <p className="modal-exp">🏆 {selectedTeacher.experience}</p>
-                <p className="modal-edu">🎓 {selectedTeacher.education}</p>
+                <h2>{openTeacher.name}</h2>
+                <p className="modal-subject">{openTeacher.subject}</p>
+                <p className="modal-exp">🏆 {tExperience(openTeacher.experience, t, lang)}</p>
+                <p className="modal-edu">🎓 {openTeacher.education}</p>
               </div>
             </div>
-            <p className="modal-bio">{selectedTeacher.full_bio}</p>
-            <div className="modal-tags-section"><h4>{t('certifications')}</h4><div className="modal-tags">{selectedTeacher.certifications.map((c,i) => <span key={i} className="tag">{c}</span>)}</div></div>
+            <p className="modal-bio">{openTeacher.full_bio}</p>
+            <div className="modal-tags-section"><h4>{t('certifications')}</h4><div className="modal-tags">{openTeacher.certifications.map((c,i) => <span key={i} className="tag">{c}</span>)}</div></div>
             {/* Achievements intentionally hidden until verified real data is entered via Admin panel — see backend/ARCHITECTURE.md */}
             <button className="btn-primary" onClick={() => { setSelectedTeacher(null); document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' }); }}>
-              {t('enroll_with', { name: selectedTeacher.name.split(' ')[0] })}
+              {t('enroll_with', { name: openTeacher.name.split(' ')[0] })}
             </button>
           </div>
         </div>

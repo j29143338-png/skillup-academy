@@ -124,7 +124,7 @@
     "formats": [
       "Individual"
     ],
-    "duration": "3–6 months",
+    "duration": "3–9 months",
     "levels": "Grade 9 – 12",
     "audience": "Applicants to Westminster Lyceum and Westminster University",
     "teacher_ids": [
@@ -172,9 +172,7 @@
       "Full mock exams"
     ],
     "formats": [
-      "Group (4–8)",
-      "Individual",
-      "Mini-group (2–3)"
+      "Individual only"
     ],
     "duration": "2–6 months",
     "levels": "Grade 9 – 11",
@@ -199,11 +197,9 @@
       "Mock exams"
     ],
     "formats": [
-      "Group (3–6)",
-      "Individual",
-      "Mini-group (2–3)"
+      "Individual only"
     ],
-    "duration": "4–8 months",
+    "duration": "4–12 months",
     "levels": "Intermediate – Advanced",
     "audience": "Applicants preparing for the Chinese Standard Certificate Assessment in maths and physics",
     "teacher_ids": [
@@ -279,8 +275,7 @@
       "Mock Goethe exams"
     ],
     "formats": [
-      "Individual only",
-      "Mini-group (2–3)"
+      "Individual only"
     ],
     "duration": "6 months – 3 years",
     "levels": "A1 – C2",
@@ -289,7 +284,7 @@
       7
     ],
     "price_individual": "1,600,000 – 4,000,000 UZS/month",
-    "note": "Individual & mini-group only."
+    "note": "Individual only."
   },
   {
     "id": 13,
@@ -333,9 +328,7 @@
       "DELE/SIELE exam prep"
     ],
     "formats": [
-      "Group (4–8)",
-      "Individual",
-      "Mini-group (2–3)"
+      "Individual only"
     ],
     "duration": "Flexible",
     "levels": "A1 – C1",

@@ -17,6 +17,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
   </head>
   <body>
+    <script>
+      // Stamp the saved language onto <html lang> before React paints. React
+      // sets it too, but only after the first render — and Chrome decides
+      // whether to offer Google Translate off the very first markup it sees.
+      // Without this a returning Russian visitor could still get the page
+      // machine-translated, slogan and all, before the app had a say.
+      try {
+        var l = localStorage.getItem('skillup_lang');
+        if (l === 'en' || l === 'ru' || l === 'uz') document.documentElement.lang = l;
+      } catch (e) { /* private windows and blocked site data throw */ }
+    </script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>

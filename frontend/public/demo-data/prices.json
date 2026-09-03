@@ -73,28 +73,28 @@
     "id": 7,
     "course": "Milliy Sertifikat",
     "individual": "1,600,000 – 4,000,000 UZS/month",
-    "mini_group": "900,000 UZS/month",
-    "group": "580,000 UZS/month"
+    "mini_group": null,
+    "group": null
   },
   {
     "id": 8,
     "course": "CSCA Math & Physics",
     "individual": "1,600,000 – 4,000,000 UZS/month",
-    "mini_group": "1,050,000 UZS/month",
-    "group": "680,000 UZS/month"
+    "mini_group": null,
+    "group": null
   },
   {
     "id": 11,
     "course": "German (A1–C2)",
     "individual": "1,600,000 – 4,000,000 UZS/month",
-    "mini_group": "950,000 UZS/month",
+    "mini_group": null,
     "group": null
   },
   {
     "id": 12,
     "course": "Spanish",
     "individual": "1,600,000 – 4,000,000 UZS/month",
-    "mini_group": "950,000 UZS/month",
-    "group": "620,000 UZS/month"
+    "mini_group": null,
+    "group": null
   }
 ]

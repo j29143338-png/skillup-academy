@@ -2,39 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCourse } from '../api';
 import { useLang } from '../context/LangContext';
+import { tCourse, tTeacher, tExperience } from '../contentI18n';
 import { useSEO } from '../hooks/useSEO';
 import './CourseDetail.css';
-
-// Teacher experience is stored as free text in English ("8 years"), because
-// that is what the admin panel accepts. Pull the number out and let each
-// language supply its own wording, so a Russian page never reads
-// "8 years опыта". Anything without a number is shown as entered.
-function formatExperience(value, t, lang) {
-  const years = String(value ?? '').match(/d+/);
-  if (!years) return value;
-  const n = Number(years[0]);
-  if (lang !== 'ru') return t('exp_years', { n });
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return t('exp_years_one', { n });
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return t('exp_years_few', { n });
-  return t('exp_years_many', { n });
-}
 
 export default function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t, lang } = useLang();
-  const [course, setCourse] = useState(null);
+  const [raw, setRaw] = useState(null);
   const [loading, setLoading] = useState(true);
+  const course = raw ? tCourse(raw, lang) : null;
   useSEO(course?.title, course?.description);
 
   useEffect(() => {
-    getCourse(parseInt(id)).then(d => { setCourse(d); setLoading(false); }).catch(() => setLoading(false));
+    getCourse(parseInt(id)).then(d => { setRaw(d); setLoading(false); }).catch(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="page-loading">Loading...</div>;
-  if (!course) return <div className="page-loading">Course not found.</div>;
+  if (loading) return <div className="page-loading">{t('loading')}</div>;
+  if (!course) return <div className="page-loading">{t('course_not_found')}</div>;
 
   return (
     <div className="cd-page">
@@ -45,7 +31,7 @@ export default function CourseDetail() {
           <div className="cd-hero-content">
             <span className="cd-icon">{course.icon}</span>
             <div>
-              <div className="cd-cat-label">{course.category}</div>
+              <div className="cd-cat-label">{course.categoryLabel}</div>
               <h1>{course.title}</h1>
               <p className="cd-desc">{course.description}</p>
               {course.audience && (
@@ -104,10 +90,10 @@ export default function CourseDetail() {
             {course.teachers?.length > 0 && (
               <div className="cd-teachers-box">
                 <h3>{t('your_teachers')}</h3>
-                {course.teachers.map(tc => (
+                {course.teachers.map(raw_tc => tTeacher(raw_tc, lang)).map(tc => (
                   <div key={tc.id} className="cd-teacher-row" onClick={() => navigate('/teachers')}>
                     <img src={tc.photo} alt={tc.name} className="cd-teacher-photo" />
-                    <div><strong>{tc.name}</strong><p>{formatExperience(tc.experience, t, lang)}</p></div>
+                    <div><strong>{tc.name}</strong><p>{tExperience(tc.experience, t, lang)}</p></div>
                   </div>
                 ))}
               </div>

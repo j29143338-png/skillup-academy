@@ -15,9 +15,9 @@ export default function Footer() {
                 <path d="M8 30L20 8L32 30" stroke="#F5820A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M12 22H28" stroke="#F5820A" strokeWidth="4" strokeLinecap="round"/>
               </svg>
-              <span>SkillUp Academy</span>
+              <span className="notranslate" translate="no">SkillUp Academy</span>
             </div>
-            <p className="footer-tagline">SkillUp & Step Up! 🚀</p>
+            <p className="footer-tagline notranslate" translate="no">SkillUp &amp; Step Up! 🚀</p>
             <p className="footer-desc">Premium online education platform delivering world-class instruction in languages and mathematics.</p>
           </div>
 

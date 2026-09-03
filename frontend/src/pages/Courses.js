@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCourses } from '../api';
 import { useLang } from '../context/LangContext';
+import { tCourse, tCategory } from '../contentI18n';
 import { useSEO } from '../hooks/useSEO';
 import './Courses.css';
 
@@ -15,7 +16,7 @@ const catColors = {
 };
 
 export default function Courses() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   useSEO(t('our_courses'), t('courses_subtitle'));
   const [courses, setCourses] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -26,8 +27,11 @@ export default function Courses() {
     getCourses().then(d => { setCourses(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
+  // Category keys stay English because they are what the records are stored
+  // with; only the label shown on the tab is translated.
   const categories = ['All', ...new Set(courses.map(c => c.category))];
   const filtered = activeCategory === 'All' ? courses : courses.filter(c => c.category === activeCategory);
+  const localised = filtered.map(c => tCourse(c, lang));
 
   return (
     <div className="courses-page">
@@ -44,21 +48,21 @@ export default function Courses() {
         <div className="category-tabs">
           {categories.map(cat => (
             <button key={cat} className={`cat-tab ${activeCategory === cat ? 'active' : ''}`} onClick={() => setActiveCategory(cat)}>
-              {cat}
+              {tCategory(cat, lang)}
               <span className="cat-count">{cat === 'All' ? courses.length : courses.filter(c => c.category === cat).length}</span>
             </button>
           ))}
         </div>
 
-        {loading ? <div className="page-loading">Loading...</div> : (
+        {loading ? <div className="page-loading">{t('loading')}</div> : (
           <div className="all-courses-grid">
-            {filtered.map(course => {
+            {localised.map(course => {
               const col = catColors[course.category] || catColors.English;
               return (
                 <div key={course.id} className="course-full-card" onClick={() => navigate(`/courses/${course.id}`)}>
                   <div className="cfc-header" style={{ background: col.bg, borderBottom: `2px solid ${col.border}` }}>
                     <span className="cfc-icon">{course.icon}</span>
-                    <span className="cfc-cat" style={{ color: col.color }}>{course.category}</span>
+                    <span className="cfc-cat" style={{ color: col.color }}>{course.categoryLabel}</span>
                   </div>
                   <div className="cfc-body">
                     <h3>{course.title}</h3>

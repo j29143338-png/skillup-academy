@@ -70,6 +70,15 @@ export default function Intro() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The component returns null once it is done but stays mounted, so the
+  // cleanup above never runs on a normal finish — the body kept `intro-locked`
+  // and the page could not be scrolled until a reload. Release the lock as soon
+  // as the intro stops playing; `.intro-leaving` is already pointer-events:none,
+  // so scrolling works while it fades out.
+  useEffect(() => {
+    if (state !== 'playing') document.body.classList.remove('intro-locked');
+  }, [state]);
+
   // Interactive: the scene leans towards the pointer, so it reads as an object
   // in space rather than a clip playing at you.
   const onMove = (e) => {
