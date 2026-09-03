@@ -18,9 +18,42 @@
  * Never touched: applications, reviews, teachers, results.
  *
  * Usage (from the backend directory):
- *   DATABASE_URL="postgres://..." node scripts/sync-content.js          # dry run
- *   DATABASE_URL="postgres://..." node scripts/sync-content.js --apply  # write
+ *   node scripts/sync-content.js          # dry run
+ *   node scripts/sync-content.js --apply  # write
+ *
+ * The connection string is read from backend/.env (gitignored) or from
+ * DATABASE_URL in the environment.
  */
+
+const fs = require("fs");
+const path = require("path");
+
+// Read backend/.env before requiring the server, which reads process.env as it
+// loads. Keeps the connection string in a gitignored file rather than in a
+// shell command that would land in history.
+if (!process.env.DATABASE_URL) {
+  const envFile = path.join(__dirname, "..", ".env");
+  if (fs.existsSync(envFile)) {
+    for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
+      if (line.trim().startsWith("#")) continue;
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      const value = m[2].replace(/^["']|["']$/g, "");
+      if (!process.env[m[1]]) process.env[m[1]] = value;
+    }
+  }
+}
+
+if (!process.env.DATABASE_URL) {
+  console.error(
+    [
+      "DATABASE_URL is not set.",
+      "Put it in backend/.env (that file is gitignored):",
+      "  DATABASE_URL=postgres://...",
+    ].join("\n")
+  );
+  process.exit(1);
+}
 
 const { seedData, loadData, saveData } = require("../server");
 
@@ -41,6 +74,22 @@ const same = (a, b) =>
 (async () => {
   const data = await loadData();
   const seed = seedData();
+
+  // These are never modified; printed so it is visible they survived the run.
+  const untouched = {
+    applications: (data.applications || []).length,
+    reviews: (data.feedbacks || []).length,
+    teachers: (data.teachers || []).length,
+    results: (data.results || []).length,
+  };
+  console.log(
+    "Left untouched: " +
+      Object.entries(untouched)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(", ") +
+      "\n"
+  );
+
   let changed = 0;
 
   // ── PRICES ────────────────────────────────────────────────────────────────
@@ -64,9 +113,8 @@ const same = (a, b) =>
     for (const f of diff) console.log(`         ${f}: ${show(before[f])}  →  ${show(row[f])}`);
     changed++;
   }
-  const droppedPrices = currentPrices.filter((p) => !nextPrices.some((n) => n.id === p.id));
-  for (const r of droppedPrices) {
-    console.log(`  ! GONE #${r.id} ${r.course} — this row is not in the new list and would be removed`);
+  for (const r of currentPrices.filter((p) => !nextPrices.some((n) => n.id === p.id))) {
+    console.log(`  ! GONE #${r.id} ${r.course} — not in the new list, would be removed`);
     changed++;
   }
   if (!changed) console.log("  (no price changes)");
