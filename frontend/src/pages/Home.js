@@ -41,6 +41,41 @@ function TiltCard({ children, className, onClick, style, maxDeg = 5 }) {
   );
 }
 
+function CertificateCard({ band, side }) {
+  return (
+    <div className={`hero-cert hero-cert-${side}`} aria-hidden="true">
+      <svg viewBox="0 0 200 150" className="hero-cert-svg" role="img">
+        {/* Card body, drawn with a slightly uneven outline so it reads as a sketch */}
+        <path
+          d="M12 16 Q10 8 19 7 L181 5 Q190 6 189 15 L191 132 Q192 141 183 142 L20 144 Q11 143 12 134 Z"
+          fill="#FFFFFF"
+          stroke="#1B3A6B"
+          strokeWidth="3.5"
+          strokeLinejoin="round"
+        />
+        {/* Header strip */}
+        <path d="M12 16 Q10 8 19 7 L181 5 Q190 6 189 15 L189 36 L12 38 Z" fill="#1B3A6B" />
+        <text x="24" y="28" className="hero-cert-label">IELTS</text>
+        {/* Band score — the whole point of the card */}
+        <text x="24" y="88" className="hero-cert-band">{band}</text>
+        <text x="24" y="106" className="hero-cert-sub">band score</text>
+        {/* Squiggles standing in for body text */}
+        <path d="M24 118 q14 -4 28 0 t28 0" stroke="#CBD5E1" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M24 128 q10 -4 20 0 t20 0" stroke="#CBD5E1" strokeWidth="3" fill="none" strokeLinecap="round" />
+        {/* Cartoon seal */}
+        <g transform="translate(150 96)">
+          <circle r="24" fill="#F5820A" stroke="#1B3A6B" strokeWidth="3" />
+          <path d="M-6 26 l-4 18 10 -7 10 7 -4 -18" fill="#F5820A" stroke="#1B3A6B" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M0 -12 l3.6 7.8 8.4 1 -6.2 5.9 1.6 8.5 -7.4 -4.2 -7.4 4.2 1.6 -8.5 -6.2 -5.9 8.4 -1 Z" fill="#FFFFFF" />
+        </g>
+        {/* Sparkles */}
+        <path d="M170 26 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 Z" fill="#FF9B35" />
+        <path d="M120 66 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 Z" fill="#F5820A" />
+      </svg>
+    </div>
+  );
+}
+
 function HeroWords({ text, className = '', startDelay = 0 }) {
   const words = String(text).split(' ').filter(Boolean);
   return (
@@ -140,6 +175,8 @@ export default function Home() {
         </div>
         <div className="container hero-content">
           <div className="hero-badge animate-fadeUp">✦ {t('hero_badge')}</div>
+          <CertificateCard band="8.0" side="left" />
+          <CertificateCard band="7.0" side="right" />
           <h1 className="hero-title hero-title-3d">
             <HeroWords text={t('hero_title1')} startDelay={0.12} />
             <HeroWords text={t('hero_title2')} className="hero-accent" startDelay={0.34} />
