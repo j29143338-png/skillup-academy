@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>SkillUp — концепт прокрутки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-deep: #060B18;
+    --navy: #0F2347;
+    --blue: #2563EB;
+    --orange: #F5820A;
+    --paper: #F6F8FC;
+    --ink: #0F172A;
+    --muted: rgba(255,255,255,0.55);
+    --display: 'Syne', system-ui, sans-serif;
+    --body: 'DM Sans', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--navy-deep);
+    color: #fff;
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  .mono {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Fixed chrome */
+  .topbar {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+    mix-blend-mode: difference;
+  }
+  .brand { font-family: var(--display); font-weight: 800; letter-spacing: 0.02em; font-size: 15px; }
+  .progress {
+    position: fixed; left: 0; top: 0; height: 2px; z-index: 60;
+    width: 0%; background: var(--orange);
+  }
+
+  /* Act 1 — a pinned scene driven entirely by scroll position */
+  /* Long enough for the scene to turn without becoming a chore to scroll;
+     capped in pixels so a tall monitor does not stretch it further. */
+  .act-hero { height: min(300vh, 2000px); position: relative; }
+  .stage {
+    position: sticky; top: 0; height: 100vh;
+    display: grid; place-items: center;
+    overflow: hidden;
+  }
+  .starfield {
+    position: absolute; inset: -10%;
+    background:
+      radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.7), transparent 60%),
+      radial-gradient(1.5px 1.5px at 70% 20%, rgba(255,255,255,0.5), transparent 60%),
+      radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,0.45), transparent 60%),
+      radial-gradient(2px 2px at 85% 60%, rgba(255,255,255,0.6), transparent 60%),
+      radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.4), transparent 60%),
+      radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.35), transparent 60%);
+    opacity: calc(1 - var(--p) * 1.15);
+  }
+  .dawn {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(27,58,107,0.65) 45%, var(--orange) 130%);
+    opacity: var(--p);
+  }
+  .stage-inner { position: relative; text-align: center; padding: 0 28px; }
+
+  .headline {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(34px, 6.6vw, 88px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 0;
+  }
+
+  /* The card stack is the scroll-driven object: flat and stacked at the top of
+     the page, turned upright and spread apart by the time you reach the end. */
+  .deck {
+    margin: 54px auto 0;
+    width: min(560px, 82vw);
+    height: 260px;
+    position: relative;
+    transform-style: preserve-3d;
+    transform:
+      perspective(1200px)
+      rotateX(calc(54deg - var(--p) * 54deg))
+      rotateZ(calc(-14deg + var(--p) * 14deg))
+      scale(calc(0.86 + var(--p) * 0.14));
+  }
+  .card {
+    position: absolute; inset: 0; margin: auto;
+    width: 190px; height: 240px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 18px;
+    text-align: left;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+  }
+  .card b { font-family: var(--display); font-size: 26px; font-weight: 800; }
+  .card i { font-style: normal; font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+  .card-1 { transform: translateX(calc(-210px * var(--p))) rotateY(calc(-18deg * var(--p))); }
+  .card-2 { transform: translateZ(calc(40px * var(--p))); border-color: rgba(245,130,10,0.5); }
+  .card-3 { transform: translateX(calc(210px * var(--p))) rotateY(calc(18deg * var(--p))); }
+
+  .scrollhint {
+    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+    opacity: calc(1 - var(--p) * 2.4);
+  }
+  .scrollhint span { display: block; width: 1px; height: 34px; margin: 10px auto 0; background: linear-gradient(var(--orange), transparent); }
+
+  /* Act 2 — statements arriving one at a time */
+  .act-lines { background: linear-gradient(180deg, var(--orange) 0%, var(--navy) 30%, var(--navy-deep) 100%); padding: 18vh 0 14vh; }
+  .line {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(24px, 3.6vw, 46px);
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+    max-width: 900px;
+    margin: 0 0 16vh;
+    opacity: 0;
+    transform: translateY(26px) rotateX(14deg);
+    transform-origin: 50% 0;
+    transition: opacity 0.9s cubic-bezier(0.16,0.84,0.28,1), transform 0.9s cubic-bezier(0.16,0.84,0.28,1);
+  }
+  .line:last-child { margin-bottom: 0; }
+  .line.in { opacity: 1; transform: none; }
+  .line em { font-style: normal; color: var(--orange); }
+  .line small { display: block; font-family: var(--body); font-weight: 400; font-size: 16px; color: var(--muted); margin-top: 14px; line-height: 1.7; max-width: 620px; }
+
+  /* Act 3 — only numbers that can be checked against the site's own data */
+  .act-facts { background: var(--paper); color: var(--ink); padding: 13vh 0; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 28px; margin-top: 46px; }
+  .fact {
+    border-top: 2px solid var(--ink);
+    padding-top: 18px;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,0.84,0.28,1);
+  }
+  .fact.in { opacity: 1; transform: none; }
+  .fact b { display: block; font-family: var(--display); font-size: clamp(38px, 4.6vw, 62px); font-weight: 800; letter-spacing: -0.02em; }
+  .fact span { display: block; font-size: 14px; color: #475569; margin-top: 6px; line-height: 1.5; }
+  .act-facts h2 { font-family: var(--display); font-size: clamp(26px, 3.4vw, 42px); font-weight: 800; margin: 12px 0 0; letter-spacing: -0.01em; }
+  .act-facts .mono { color: #64748B; }
+
+  /* Act 4 — close */
+  .act-end { background: var(--navy-deep); padding: 15vh 0; text-align: center; }
+  .act-end h2 { font-family: var(--display); font-size: clamp(30px, 5vw, 62px); font-weight: 800; margin: 14px 0 22px; letter-spacing: -0.02em; }
+  .act-end p { color: var(--muted); max-width: 520px; margin: 0 auto 34px; line-height: 1.7; }
+  .btn {
+    display: inline-block; background: var(--orange); color: #fff; text-decoration: none;
+    font-weight: 600; padding: 15px 30px; border-radius: 100px; font-size: 15px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(245,130,10,0.35); }
+  .note { margin-top: 44px; font-size: 12px; color: rgba(255,255,255,0.35); }
+
+  @media (max-width: 700px) {
+    .deck { height: 210px; }
+    .card { width: 150px; height: 195px; }
+    .card-1 { transform: translateX(calc(-120px * var(--p))) rotateY(calc(-18deg * var(--p))); }
+    .card-3 { transform: translateX(calc(120px * var(--p))) rotateY(calc(18deg * var(--p))); }
+  }
+
+  /* Motion is the point of this page, so with reduced motion it becomes a
+     plain readable document rather than a broken one. */
+  @media (prefers-reduced-motion: reduce) {
+    .act-hero { height: auto; }
+    .stage { position: relative; height: auto; padding: 20vh 0; }
+    .deck { transform: none; display: flex; justify-content: center; flex-wrap: wrap; height: auto; }
+    .card { position: relative; inset: auto; margin: 8px; }
+    .starfield, .dawn { opacity: 0.5; }
+    .line, .fact { opacity: 1; transform: none; transition: none; }
+    .scrollhint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<header class="topbar">
+  <div class="brand">SKILLUP</div>
+  <div class="mono">концепт · прокрутка</div>
+</header>
+
+<section class="act-hero" id="hero">
+  <div class="stage" id="stage" style="--p:0">
+    <div class="starfield"></div>
+    <div class="dawn"></div>
+    <div class="stage-inner">
+      <div class="mono">SkillUp Academy</div>
+      <h1 class="headline">Учитесь эффективно.<br>Достигайте большего.</h1>
+      <div class="deck">
+        <div class="card card-1"><b>A1</b><i>старт с нуля</i></div>
+        <div class="card card-2"><b>B2</b><i>уверенный уровень</i></div>
+        <div class="card card-3"><b>C1</b><i>академический</i></div>
+      </div>
+    </div>
+    <div class="scrollhint"><div class="mono">крутите</div><span></span></div>
+  </div>
+</section>
+
+<section class="act-lines">
+  <div class="wrap">
+    <p class="line">Обучение начинается не с учебника, а с <em>вашего уровня</em>.
+      <small>На первом занятии преподаватель определяет, где вы находитесь сейчас — программа строится от этой точки, а не от общего плана.</small></p>
+    <p class="line">В группе <em>не больше четырёх человек</em>.
+      <small>Столько, чтобы каждый успевал говорить на каждом занятии, а преподаватель видел прогресс каждого.</small></p>
+    <p class="line">Пропустили занятие — есть <em>Academic Support</em>.
+      <small>Короткая индивидуальная встреча, чтобы разобрать пропущенный материал. Это поддержка, а не замена урока: расписание группы остаётся стабильным для всех.</small></p>
+  </div>
+</section>
+
+<section class="act-facts">
+  <div class="wrap">
+    <div class="mono">что можно проверить</div>
+    <h2>Цифры, за которыми стоят данные</h2>
+    <div class="facts">
+      <div class="fact"><b>13</b><span>программ — от общего английского до подготовки к TOEFL и Westminster</span></div>
+      <div class="fact"><b>6</b><span>языков и предметов: английский, математика, русский, узбекский, немецкий, испанский</span></div>
+      <div class="fact"><b>4</b><span>человека — максимальный размер группы</span></div>
+      <div class="fact"><b>12</b><span>занятий в оплаченном пакете; договор заключается на 12 месяцев</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="act-end">
+  <div class="wrap">
+    <div class="mono">дальше</div>
+    <h2>Начните с пробного урока</h2>
+    <p>Настоящее занятие с преподавателем — бесплатно и без обязательств. На нём же определим ваш уровень.</p>
+    <a class="btn" href="/?demo=1">Записаться на пробный урок</a>
+    <div class="note">Демонстрационная страница: показывает подход к анимации, а не готовый дизайн сайта.</div>
+  </div>
+</section>
+
+<script>
+  // Scroll position drives one custom property, and every transform in Act 1 is
+  // written in terms of it — the scene is a function of where you are on the
+  // page rather than a timeline that plays on its own.
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var hero = document.getElementById('hero');
+    var stage = document.getElementById('stage');
+    var bar = document.getElementById('progress');
+    var ticking = false;
+
+    function frame() {
+      ticking = false;
+      var rect = hero.getBoundingClientRect();
+      var travel = hero.offsetHeight - window.innerHeight;
+      var p = travel > 0 ? Math.min(1, Math.max(0, -rect.top / travel)) : 0;
+      if (!reduce) stage.style.setProperty('--p', p.toFixed(4));
+
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - window.innerHeight;
+      bar.style.width = (max > 0 ? (doc.scrollTop / max) * 100 : 0) + '%';
+      reveal();
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(frame); }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+
+    // Statements and facts arrive as they come into view. Checked every frame
+    // rather than through IntersectionObserver: a fast scroll can carry an
+    // element from below the fold to above it inside one frame, and the
+    // observer then never reports it as intersecting — the element stays
+    // invisible for good. This pass cannot miss anything.
+    var pending = [].slice.call(document.querySelectorAll('.line, .fact'));
+    if (reduce) {
+      pending.forEach(function (el) { el.classList.add('in'); });
+      pending = [];
+    }
+    // Declared before the first frame() call below, which uses it.
+    function reveal() {
+      var trigger = window.innerHeight * 0.85;
+      for (var i = pending.length - 1; i >= 0; i--) {
+        if (pending[i].getBoundingClientRect().top < trigger) {
+          pending[i].classList.add('in');
+          pending.splice(i, 1);
+        }
+      }
+    }
+
+    // First pass once everything above is defined.
+    frame();
+  })();
+</script>
+</body>
+</html>
