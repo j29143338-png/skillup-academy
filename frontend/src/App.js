@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { LangProvider } from './context/LangContext';
 import { isDemo } from './api';
+import Intro from './components/Intro';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -38,6 +39,7 @@ function Layout() {
   const hideFooter = pathname === '/admin';
   return (
     <>
+      {pathname === '/' && <Intro />}
       <DemoBanner />
       <Navbar />
       <Routes>
