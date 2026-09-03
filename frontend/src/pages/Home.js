@@ -41,6 +41,23 @@ function TiltCard({ children, className, onClick, style, maxDeg = 5 }) {
   );
 }
 
+function HeroWords({ text, className = '', startDelay = 0 }) {
+  const words = String(text).split(' ').filter(Boolean);
+  return (
+    <span className={`hero-line ${className}`}>
+      {words.map((word, i) => (
+        <span
+          key={`${word}-${i}`}
+          className="hero-word"
+          style={{ animationDelay: `${(startDelay + i * 0.09).toFixed(2)}s` }}
+        >
+          {word}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 const catColor = { English:'#2563EB', Math:'#059669', Russian:'#DC2626', Uzbek:'#7C3AED', German:'#1A1A1A', Spanish:'#D97706' };
 
 const emptyForm = { name: '', phone: '', age: '', telegram: '', course: '', format: '', days: '', time: '', message: '', purpose: 'trial' };
@@ -123,9 +140,9 @@ export default function Home() {
         </div>
         <div className="container hero-content">
           <div className="hero-badge animate-fadeUp">✦ {t('hero_badge')}</div>
-          <h1 className="hero-title animate-fadeUp" style={{ animationDelay: '0.1s' }}>
-            {t('hero_title1')}<br />
-            <span className="hero-accent">{t('hero_title2')}</span>
+          <h1 className="hero-title hero-title-3d">
+            <HeroWords text={t('hero_title1')} startDelay={0.12} />
+            <HeroWords text={t('hero_title2')} className="hero-accent" startDelay={0.34} />
           </h1>
           <p className="hero-subtitle animate-fadeUp" style={{ animationDelay: '0.2s' }}>{t('hero_subtitle')}</p>
           <div className="hero-actions animate-fadeUp" style={{ animationDelay: '0.3s' }}>
