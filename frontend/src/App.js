@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { LangProvider } from './context/LangContext';
+import { isDemo } from './api';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -19,11 +20,25 @@ function ScrollToTop() {
   return null;
 }
 
+function DemoBanner() {
+  const on = isDemo();
+  useEffect(() => {
+    document.body.classList.toggle('demo-mode', on);
+  }, [on]);
+  if (!on) return null;
+  return (
+    <div className="demo-banner">
+      Демо-версия · данные показаны из подготовленного набора, заявки не отправляются
+    </div>
+  );
+}
+
 function Layout() {
   const { pathname } = useLocation();
   const hideFooter = pathname === '/admin';
   return (
     <>
+      <DemoBanner />
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />

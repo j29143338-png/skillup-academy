@@ -1,0 +1,160 @@
+[
+  {
+    "id": 1,
+    "name": "Sarah Mitchell",
+    "subject": "General English & IELTS",
+    "experience": "8 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah&backgroundColor=b6e3f4",
+    "short_bio": "Cambridge CELTA certified IELTS examiner with 8 years of experience.",
+    "full_bio": "Sarah Mitchell holds an M.A. in Applied Linguistics from the University of Manchester. A certified IELTS examiner and Cambridge CELTA instructor, her students achieve average band improvements of 1.5 in just 3 months.",
+    "education": "M.A. Applied Linguistics, University of Manchester",
+    "certifications": [
+      "Cambridge CELTA",
+      "IELTS Examiner",
+      "DELTA Module 1"
+    ],
+    "achievements": [
+      "100+ students scored 7.0+ IELTS",
+      "Published IELTS prep guides",
+      "Former British Council teacher"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "James Anderson",
+    "subject": "CEFR & SAT English",
+    "experience": "6 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=James&backgroundColor=c0aede",
+    "short_bio": "SAT & CEFR specialist. Former Princeton Review instructor, scored 1580 SAT.",
+    "full_bio": "James Anderson scored 1580 on the SAT and is a former Princeton Review instructor. He specialises in CEFR certification and SAT English strategic prep.",
+    "education": "B.A. English Literature, Yale University",
+    "certifications": [
+      "Princeton Review Certified",
+      "SAT Specialist",
+      "CEFR Assessor"
+    ],
+    "achievements": [
+      "200+ average score improvement",
+      "Former Princeton Review lead",
+      "98th percentile SAT scorer"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Dr. Amir Karimov",
+    "subject": "Mathematics (all programs)",
+    "experience": "10 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Amir&backgroundColor=ffd5dc",
+    "short_bio": "PhD Math. Westminster, SAT, Milliy Sertifikat & CSCA specialist.",
+    "full_bio": "Dr. Amir Karimov holds a PhD in Pure Mathematics. His 92% Westminster acceptance rate and 50+ perfect SAT Math scores speak for themselves.",
+    "education": "Ph.D. Pure Mathematics, National University of Uzbekistan",
+    "certifications": [
+      "PhD Mathematics",
+      "SAT Specialist",
+      "Westminster Prep Certified"
+    ],
+    "achievements": [
+      "50+ perfect SAT Math 800s",
+      "92% Westminster acceptance rate",
+      "Published 3 textbooks"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Li Wei Chen",
+    "subject": "Chinese Exams & CSCA",
+    "experience": "7 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=LiWei&backgroundColor=d1f7c4",
+    "short_bio": "Native Mandarin speaker, CSCA examiner from Peking University.",
+    "full_bio": "Li Wei Chen graduated from Peking University and specialises in CSCA Math & Physics preparation. 200+ students have passed CSCA under her guidance.",
+    "education": "B.Ed. Teaching Chinese as Foreign Language, Peking University",
+    "certifications": [
+      "HSK Level 6",
+      "CSCA Examiner",
+      "Physics Specialist"
+    ],
+    "achievements": [
+      "200+ CSCA passers",
+      "Immersive Mandarin curriculum",
+      "Guest lecturer at 3 universities"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Natalia Ivanova",
+    "subject": "Russian for Foreigners",
+    "experience": "9 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Natalia&backgroundColor=ffeaa7",
+    "short_bio": "RFL certified. Teaches Russian entirely through English.",
+    "full_bio": "Natalia Ivanova holds an M.A. in Russian Philology and teaches Russian exclusively through English — making grammar accessible to international students.",
+    "education": "M.A. Russian Philology, St Petersburg State University",
+    "certifications": [
+      "RFL Certified Teacher",
+      "TORFL Examiner"
+    ],
+    "achievements": [
+      "Students from 20+ countries",
+      "English-medium Russian method",
+      "Former Pushkin Institute teacher"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Zulfiya Nazarova",
+    "subject": "Uzbek for Foreigners",
+    "experience": "5 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Zulfiya&backgroundColor=a8edea",
+    "short_bio": "Native Uzbek speaker. Teaches Uzbek through English for expats & foreigners.",
+    "full_bio": "Zulfiya Nazarova specialises in teaching Uzbek as a foreign language through English. She has worked with diplomatic corps and business professionals.",
+    "education": "B.A. Uzbek Linguistics, National University of Uzbekistan",
+    "certifications": [
+      "UFL Certified Teacher",
+      "Uzbek Language Instructor"
+    ],
+    "achievements": [
+      "100+ foreigners achieved conversational Uzbek",
+      "Worked with diplomatic corps",
+      "English-medium Uzbek curriculum"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Klaus Müller",
+    "subject": "German Language & Goethe Prep",
+    "experience": "5 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Klaus&backgroundColor=dfe6e9",
+    "short_bio": "Native German speaker. Goethe Institut certified A1–C2 instructor from Munich.",
+    "full_bio": "Klaus Müller is a native German speaker from Munich, Goethe Institut certified. He guides students from absolute beginner to C2 with custom plans.",
+    "education": "B.A. German Language & Literature, Ludwig Maximilian University",
+    "certifications": [
+      "Goethe Institut Certified",
+      "DaF Instructor",
+      "C2 Proficiency"
+    ],
+    "achievements": [
+      "80+ Goethe exam passers",
+      "Full A1–C2 program",
+      "Custom plans for every student"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Isabella García",
+    "subject": "Spanish Language",
+    "experience": "6 years",
+    "photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella&backgroundColor=fdcb6e",
+    "short_bio": "Native Spanish speaker from Madrid. DELE examiner with 6 years experience.",
+    "full_bio": "Isabella García is a DELE examiner from Madrid. Her communicative teaching method delivers fast, real-world results from A1 to C1.",
+    "education": "B.A. Hispanic Philology, Complutense University of Madrid",
+    "certifications": [
+      "DELE Examiner",
+      "SIELE Instructor",
+      "Instituto Cervantes Certified"
+    ],
+    "achievements": [
+      "100+ DELE exam passers",
+      "Full A1–C1 curriculum",
+      "Former Instituto Cervantes teacher"
+    ]
+  }
+]

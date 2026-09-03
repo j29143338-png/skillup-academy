@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "Zulfiya Rahimova",
+    "course": "IELTS Preparation",
+    "score": "Band 7.5",
+    "text": "SkillUp Academy changed my life. I went from 5.5 to 7.5 in 4 months. Sarah's methods are incredible!",
+    "avatar": "ZR",
+    "rating": 5
+  },
+  {
+    "id": 2,
+    "name": "Bobur Tashmatov",
+    "course": "SAT Math",
+    "score": "790/800",
+    "text": "Dr. Karimov is the best math teacher I've ever had. Crystal-clear explanations and real strategies.",
+    "avatar": "BT",
+    "rating": 5
+  },
+  {
+    "id": 3,
+    "name": "Anna Schmidt",
+    "course": "Russian for Foreigners",
+    "score": "B1 Level",
+    "text": "Natalia is incredibly patient. After 6 months in English, I can hold full Russian conversations!",
+    "avatar": "AS",
+    "rating": 5
+  },
+  {
+    "id": 4,
+    "name": "Marcus Bauer",
+    "course": "German Language",
+    "score": "Goethe B2",
+    "text": "Klaus took me from zero to B2 in 14 months. I passed the Goethe exam on my first attempt!",
+    "avatar": "MB",
+    "rating": 5
+  },
+  {
+    "id": 5,
+    "name": "Kamola Yusupova",
+    "course": "Westminster Prep",
+    "score": "Accepted",
+    "text": "Dr. Karimov's Westminster prep was extraordinary. I got accepted on my first application!",
+    "avatar": "KY",
+    "rating": 5
+  }
+]

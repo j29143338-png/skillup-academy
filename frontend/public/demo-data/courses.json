@@ -1,0 +1,349 @@
+[
+  {
+    "id": 1,
+    "category": "English",
+    "icon": "🌍",
+    "title": "General English",
+    "description": "Comprehensive English for all levels. Build fluency in speaking, writing, reading and listening.",
+    "program": [
+      "Grammar A1–C2",
+      "Conversational fluency",
+      "Business English",
+      "Reading & writing",
+      "Listening comprehension"
+    ],
+    "formats": [
+      "Group (up to 4)",
+      "Individual",
+      "Mini-group (2)"
+    ],
+    "duration": "3–12 months",
+    "levels": "A1 – C2",
+    "audience": "Anyone building everyday and working English, from beginner to confident fluency",
+    "teacher_ids": [
+      1,
+      2
+    ],
+    "price_individual": "2,500,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 2,
+    "category": "English",
+    "icon": "📊",
+    "title": "IELTS Preparation",
+    "description": "Targeted IELTS prep for band 6.5–8.0. Expert strategies across all four skills.",
+    "program": [
+      "Writing Task 1 & 2",
+      "Speaking Part 1–3",
+      "Reading techniques",
+      "Listening mastery",
+      "Mock tests & feedback"
+    ],
+    "formats": [
+      "Group (up to 4)",
+      "Individual",
+      "Intensive crash course"
+    ],
+    "duration": "2–6 months",
+    "levels": "B1 – C1",
+    "audience": "Applicants to universities or immigration programmes that ask for an IELTS band",
+    "teacher_ids": [
+      1,
+      2
+    ],
+    "price_individual": "3,500,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 3,
+    "category": "English",
+    "icon": "🎯",
+    "title": "CEFR Preparation",
+    "description": "Official CEFR level certification prep A1–C2. Internationally recognised qualification.",
+    "program": [
+      "CEFR level diagnostics",
+      "Level-specific grammar",
+      "Exam technique per level",
+      "Speaking & writing prep",
+      "Mock CEFR exams"
+    ],
+    "formats": [
+      "Group (up to 4)",
+      "Individual",
+      "Mini-group (2)"
+    ],
+    "duration": "2–8 months",
+    "levels": "A1 – C2",
+    "audience": "Those who need an official CEFR certificate for study or work",
+    "teacher_ids": [
+      1,
+      2
+    ],
+    "price_individual": "",
+    "note": ""
+  },
+  {
+    "id": 4,
+    "category": "Math",
+    "icon": "📐",
+    "title": "Math in Russian",
+    "description": "Mathematics taught in Russian. School curriculum, olympiad prep, and university foundation.",
+    "program": [
+      "Algebra & number theory",
+      "Geometry & trigonometry",
+      "Functions & calculus",
+      "Probability & statistics",
+      "Problem-solving"
+    ],
+    "formats": [
+      "Individual"
+    ],
+    "duration": "3–12 months",
+    "levels": "Grade 5 – 11",
+    "audience": "School students taking maths in Russian — school syllabus, olympiads, university entry",
+    "teacher_ids": [
+      3
+    ],
+    "price_individual": "3,000,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 5,
+    "category": "Math",
+    "icon": "🏫",
+    "title": "Westminster Lyceum & University Prep",
+    "description": "Targeted preparation for Westminster Lyceum and Westminster University entrance exams.",
+    "program": [
+      "Westminster exam format",
+      "Math & English integrated prep",
+      "Critical thinking",
+      "Past paper practice",
+      "Interview preparation"
+    ],
+    "formats": [
+      "Individual"
+    ],
+    "duration": "3–6 months",
+    "levels": "Grade 9 – 12",
+    "audience": "Applicants to Westminster Lyceum and Westminster University",
+    "teacher_ids": [
+      3
+    ],
+    "price_individual": "4,000,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 6,
+    "category": "Math",
+    "icon": "🎓",
+    "title": "SAT Math",
+    "description": "SAT Math prep covering Heart of Algebra, Advanced Math, and Data Analysis.",
+    "program": [
+      "Heart of Algebra",
+      "Advanced Math",
+      "Problem Solving & Data Analysis",
+      "Geometry",
+      "Calculator & No-Calculator sections"
+    ],
+    "formats": [
+      "Individual"
+    ],
+    "duration": "3–6 months",
+    "levels": "Grade 10–12",
+    "audience": "Applicants to universities that ask for SAT results",
+    "teacher_ids": [
+      3
+    ],
+    "price_individual": "4,000,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 7,
+    "category": "Math",
+    "icon": "🏅",
+    "title": "Milliy Sertifikat",
+    "description": "Preparation for Uzbekistan's national certificate exam in Mathematics.",
+    "program": [
+      "National curriculum review",
+      "Exam format & marking",
+      "Common question types",
+      "Speed & accuracy",
+      "Full mock exams"
+    ],
+    "formats": [
+      "Group (4–8)",
+      "Individual",
+      "Mini-group (2–3)"
+    ],
+    "duration": "2–6 months",
+    "levels": "Grade 9 – 11",
+    "audience": "Those sitting Uzbekistan's national certificate exam in mathematics",
+    "teacher_ids": [
+      3
+    ],
+    "price_individual": "1,600,000 – 4,000,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 8,
+    "category": "Math",
+    "icon": "🔬",
+    "title": "CSCA — Math & Physics",
+    "description": "Preparation for the Chinese Standard Certificate Assessment in Math and Physics.",
+    "program": [
+      "CSCA exam format",
+      "Advanced Mathematics",
+      "Physics problem-solving",
+      "Chinese academic terms",
+      "Mock exams"
+    ],
+    "formats": [
+      "Group (3–6)",
+      "Individual",
+      "Mini-group (2–3)"
+    ],
+    "duration": "4–8 months",
+    "levels": "Intermediate – Advanced",
+    "audience": "Applicants preparing for the Chinese Standard Certificate Assessment in maths and physics",
+    "teacher_ids": [
+      3,
+      4
+    ],
+    "price_individual": "1,600,000 – 4,000,000 UZS/month",
+    "note": ""
+  },
+  {
+    "id": 9,
+    "category": "Russian",
+    "icon": "🇷🇺",
+    "title": "Russian for Foreigners",
+    "description": "Russian for non-native speakers — taught entirely in English.",
+    "program": [
+      "Cyrillic & phonetics",
+      "Core grammar in English",
+      "Everyday conversation",
+      "Reading & writing",
+      "Russian culture"
+    ],
+    "formats": [
+      "Individual only",
+      "Mini-group (2)"
+    ],
+    "duration": "Flexible",
+    "levels": "A1 – B2",
+    "audience": "Non-native speakers who want to learn Russian through English",
+    "teacher_ids": [
+      5
+    ],
+    "price_individual": "2,000,000 UZS/month",
+    "note": "Taught in English. Individual & mini-group only."
+  },
+  {
+    "id": 10,
+    "category": "Uzbek",
+    "icon": "🇺🇿",
+    "title": "Uzbek for Foreigners",
+    "description": "Uzbek for non-native speakers — taught entirely in English.",
+    "program": [
+      "Uzbek alphabet & pronunciation",
+      "Essential grammar in English",
+      "Daily conversation",
+      "Reading & writing",
+      "Culture"
+    ],
+    "formats": [
+      "Individual only",
+      "Mini-group (2)"
+    ],
+    "duration": "Flexible",
+    "levels": "A1 – B1",
+    "audience": "Expats and foreign professionals living or working in Uzbekistan",
+    "teacher_ids": [
+      6
+    ],
+    "price_individual": "2,000,000 UZS/month",
+    "note": "Taught in English. Individual & mini-group only."
+  },
+  {
+    "id": 11,
+    "category": "German",
+    "icon": "🇩🇪",
+    "title": "German Language (A1 → C2)",
+    "description": "German from zero to C2. Full Goethe Institut certificate preparation included.",
+    "program": [
+      "German phonetics & alphabet",
+      "Grammar A1–C2",
+      "Conversational German",
+      "Goethe exam strategies",
+      "Mock Goethe exams"
+    ],
+    "formats": [
+      "Individual only",
+      "Mini-group (2–3)"
+    ],
+    "duration": "6 months – 3 years",
+    "levels": "A1 – C2",
+    "audience": "Those learning German from zero, including towards Goethe certification",
+    "teacher_ids": [
+      7
+    ],
+    "price_individual": "1,600,000 – 4,000,000 UZS/month",
+    "note": "Individual & mini-group only."
+  },
+  {
+    "id": 13,
+    "category": "English",
+    "icon": "📝",
+    "title": "TOEFL Preparation",
+    "description": "Preparation for the updated TOEFL iBT: four sections in under two hours, scored on the 1–6 band scale aligned to CEFR.",
+    "program": [
+      "Reading — adaptive section, academic passages and everyday texts",
+      "Listening — conversations, announcements and academic talks",
+      "Speaking — repetition and interview tasks",
+      "Writing — email, sentence building and academic discussion",
+      "Full mock tests with feedback on each section"
+    ],
+    "formats": [
+      "Group (up to 4)",
+      "Individual",
+      "Mini-group (2)"
+    ],
+    "duration": "2–6 months",
+    "levels": "B1 – C1",
+    "audience": "Applicants to universities that accept TOEFL results",
+    "teacher_ids": [
+      1,
+      2
+    ],
+    "price_individual": "2,000,000 UZS/month",
+    "note": "Test updated in January 2026: results are reported on a 1–6 scale (band 4 corresponds to CEFR B2); the 0–120 score is also shown during the transition period."
+  },
+  {
+    "id": 12,
+    "category": "Spanish",
+    "icon": "🇪🇸",
+    "title": "Spanish Language",
+    "description": "Spanish from beginner to advanced with expert instructors.",
+    "program": [
+      "Spanish phonetics",
+      "Core grammar A1–C1",
+      "Conversational Spanish",
+      "Reading & writing",
+      "DELE/SIELE exam prep"
+    ],
+    "formats": [
+      "Group (4–8)",
+      "Individual",
+      "Mini-group (2–3)"
+    ],
+    "duration": "Flexible",
+    "levels": "A1 – C1",
+    "audience": "Those learning Spanish from beginner level, including for DELE and SIELE",
+    "teacher_ids": [
+      8
+    ],
+    "price_individual": "1,600,000 – 4,000,000 UZS/month",
+    "note": ""
+  }
+]

@@ -228,3 +228,33 @@ input, textarea, select { font-family: var(--font-body); }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Demo mode banner — only rendered when ?demo=1 is active */
+.demo-banner {
+  /* Fixed above the navbar, which is itself fixed at the top; the body gets
+     matching padding from .demo-mode so nothing hides underneath. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: var(--orange);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
+  padding: 7px 14px;
+  line-height: 1.4;
+}
+@media (max-width: 480px) {
+  .demo-banner { font-size: 0.74rem; padding: 6px 10px; }
+}
+
+/* Demo mode shifts the fixed navbar down so the banner sits above it. */
+body.demo-mode .navbar { top: 33px; }
+body.demo-mode { padding-top: 33px; }
+@media (max-width: 480px) {
+  body.demo-mode .navbar { top: 42px; }
+  body.demo-mode { padding-top: 42px; }
+}

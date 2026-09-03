@@ -1,0 +1,100 @@
+[
+  {
+    "id": 1,
+    "course": "General English",
+    "individual": "2,500,000 UZS/month",
+    "mini_group": "2,000,000 UZS/month",
+    "group": "1,200,000 UZS/month"
+  },
+  {
+    "id": 2,
+    "course": "IELTS Preparation",
+    "individual": "3,500,000 UZS/month",
+    "mini_group": "3,000,000 UZS/month",
+    "group": "1,500,000 UZS/month"
+  },
+  {
+    "id": 3,
+    "course": "CEFR Preparation",
+    "individual": null,
+    "mini_group": null,
+    "group": "1,200,000 UZS/month"
+  },
+  {
+    "id": 13,
+    "course": "TOEFL Preparation",
+    "individual": "2,000,000 UZS/month",
+    "mini_group": "1,800,000 UZS/month",
+    "group": "1,200,000 UZS/month"
+  },
+  {
+    "id": 4,
+    "course": "Math in Russian",
+    "individual": "3,000,000 UZS/month",
+    "mini_group": null,
+    "group": null
+  },
+  {
+    "id": 5,
+    "course": "Westminster Prep",
+    "individual": "4,000,000 UZS/month",
+    "mini_group": null,
+    "group": null
+  },
+  {
+    "id": 6,
+    "course": "SAT — Math",
+    "individual": "4,000,000 UZS/month",
+    "mini_group": null,
+    "group": null
+  },
+  {
+    "id": 14,
+    "course": "SAT — Math & English",
+    "individual": "4,600,000 UZS/month",
+    "mini_group": null,
+    "group": null
+  },
+  {
+    "id": 9,
+    "course": "Russian for Foreigners",
+    "individual": "2,000,000 UZS/month",
+    "mini_group": "1,800,000 UZS/month",
+    "group": null
+  },
+  {
+    "id": 10,
+    "course": "Uzbek for Foreigners",
+    "individual": "2,000,000 UZS/month",
+    "mini_group": "1,800,000 UZS/month",
+    "group": null
+  },
+  {
+    "id": 7,
+    "course": "Milliy Sertifikat",
+    "individual": "1,600,000 – 4,000,000 UZS/month",
+    "mini_group": "900,000 UZS/month",
+    "group": "580,000 UZS/month"
+  },
+  {
+    "id": 8,
+    "course": "CSCA Math & Physics",
+    "individual": "1,600,000 – 4,000,000 UZS/month",
+    "mini_group": "1,050,000 UZS/month",
+    "group": "680,000 UZS/month"
+  },
+  {
+    "id": 11,
+    "course": "German (A1–C2)",
+    "individual": "1,600,000 – 4,000,000 UZS/month",
+    "mini_group": "950,000 UZS/month",
+    "group": null
+  },
+  {
+    "id": 12,
+    "course": "Spanish",
+    "individual": "1,600,000 – 4,000,000 UZS/month",
+    "mini_group": "950,000 UZS/month",
+    "group": "620,000 UZS/month"
+  }
+]
