@@ -6,3 +6,4 @@ backend/data.json
 .env
 .DS_Store
 *.log
+frontend/standalone-demo.html

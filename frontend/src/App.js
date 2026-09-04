@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { LangProvider } from './context/LangContext';
 import { isDemo } from './api';
 import Intro from './components/Intro';
@@ -58,13 +58,18 @@ function Layout() {
   );
 }
 
+// The standalone demo is one HTML file with nothing serving it, so a path like
+// /courses would 404 on reload. That build routes on the hash instead; the
+// deployed site keeps clean URLs.
+const Router = process.env.REACT_APP_STANDALONE === '1' ? HashRouter : BrowserRouter;
+
 export default function App() {
   return (
     <LangProvider>
-      <BrowserRouter>
+      <Router>
         <ScrollToTop />
         <Layout />
-      </BrowserRouter>
+      </Router>
     </LangProvider>
   );
 }

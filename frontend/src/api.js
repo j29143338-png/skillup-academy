@@ -26,12 +26,23 @@ function readDemoFlag() {
   }
 }
 
-export const isDemo = () => readDemoFlag();
+export const isDemo = () => Boolean(inlinedDemo()) || readDemoFlag();
 
-const demoFile = (name) => fetch(`/demo-data/${name}.json`).then((res) => {
-  if (!res.ok) throw new Error(res.statusText);
-  return res.json();
-});
+// The standalone demo build has no server to fetch from — the whole snapshot is
+// inlined into the page as `window.__SKILLUP_DEMO_DATA__`. When that is present
+// it is the source, and demo mode is always on: there is no backend to fall
+// back to. Everywhere else this is undefined and nothing changes.
+const inlinedDemo = () =>
+  (typeof window !== 'undefined' && window.__SKILLUP_DEMO_DATA__) || null;
+
+const demoFile = (name) => {
+  const inlined = inlinedDemo();
+  if (inlined) return Promise.resolve(inlined[name] ?? []);
+  return fetch(`/demo-data/${name}.json`).then((res) => {
+    if (!res.ok) throw new Error(res.statusText);
+    return res.json();
+  });
+};
 
 async function get(path) {
   const res = await fetch(r(path));
