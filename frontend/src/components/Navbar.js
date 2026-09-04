@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
+import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -8,6 +9,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const { lang, setLang, t } = useLang();
+  const { user } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -22,6 +24,9 @@ export default function Navbar() {
     { to: '/teachers', label: t('nav_teachers') },
     { to: '/prices', label: t('nav_prices') },
     { to: '/feedback', label: t('nav_feedback') },
+    // One slot, two destinations: signed in it opens the cabinet, signed out it
+    // opens the sign-in page. Nobody needs to see both at once.
+    user ? { to: '/cabinet', label: t('nav_cabinet') } : { to: '/login', label: t('nav_login') },
   ];
   const langs = ['en', 'ru', 'uz'];
 

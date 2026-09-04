@@ -25,6 +25,8 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
+const { ensureCabinetSchema, ensureOwner } = require("./cabinet");
+const { cabinetRouter } = require("./cabinetApi");
 
 const PORT = process.env.PORT || 8000;
 const ADMIN_USER = process.env.ADMIN_USERNAME || "admin";
@@ -202,61 +204,6 @@ async function ensureTable() {
       data JSONB NOT NULL
     )
   `);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FUTURE SCHEMA — foundation for upcoming role-based dashboards
-// (student / parent / teacher / administrator / owner — see backend/ARCHITECTURE.md)
-// These tables are created but NOT used by any route yet. No current feature
-// depends on them; this only prepares storage so real data can be entered
-// once the login/dashboard work for each role is built in a later stage.
-// ─────────────────────────────────────────────────────────────────────────────
-async function ensureFutureTables() {
-  if (!pool) return;
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL CHECK (role IN ('student','parent','teacher','admin','owner')),
-        full_name TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        created_by INTEGER REFERENCES users(id)
-      );
-      CREATE TABLE IF NOT EXISTS contracts (
-        id SERIAL PRIMARY KEY,
-        student_id INTEGER REFERENCES users(id),
-        contract_start DATE NOT NULL,
-        contract_end DATE NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS lesson_packages (
-        id SERIAL PRIMARY KEY,
-        student_id INTEGER REFERENCES users(id),
-        contract_id INTEGER REFERENCES contracts(id),
-        lessons_paid INTEGER NOT NULL DEFAULT 0,
-        lessons_used INTEGER NOT NULL DEFAULT 0,
-        purchased_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS schedule_slots (
-        id SERIAL PRIMARY KEY,
-        student_id INTEGER REFERENCES users(id),
-        weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6),
-        time TEXT NOT NULL,
-        format TEXT NOT NULL CHECK (format IN ('group','individual'))
-      );
-      CREATE TABLE IF NOT EXISTS action_log (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        action TEXT NOT NULL,
-        target TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-  } catch (e) {
-    console.error("ensureFutureTables failed (non-fatal, current site is unaffected):", e.message);
-  }
 }
 
 async function loadData() {
@@ -596,6 +543,11 @@ router.delete("/admin/results/:id", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+// The cabinets ride on the same router so they inherit the "/" + "/api"
+// mounting below, and so /auth and /cabinet resolve the same way in both
+// environments. rateLimit and clean are shared rather than reimplemented.
+router.use(cabinetRouter({ pool, rateLimit, clean }));
+
 // Mount router at both "/" and "/api" so it works for prod (Render, no prefix)
 // and local dev (frontend calls with "/api" prefix on localhost)
 app.use("/", router);
@@ -630,9 +582,14 @@ function startServer() {
   app.listen(PORT, () => {
     console.log(`SkillUp Academy API running on port ${PORT}`);
     console.log(`Storage mode: ${STORAGE_MODE}`);
-    ensureFutureTables().then(() => {
-      if (pool) console.log("Future-role schema ready (users/contracts/lesson_packages/schedule_slots/action_log)");
-    });
+    ensureCabinetSchema(pool)
+      .then(() => ensureOwner(pool))
+      .then(() => {
+        if (pool) console.log("Cabinet schema ready (users/roles/schedule/homework/attendance/payments)");
+      })
+      // The public site does not depend on these tables, so a schema problem
+      // must not stop the server from serving courses and prices.
+      .catch((e) => console.error("Cabinet schema setup failed (public site unaffected):", e.message));
   });
 }
 

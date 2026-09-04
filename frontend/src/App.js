@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { LangProvider } from './context/LangContext';
+import { AuthProvider } from './context/AuthContext';
 import { isDemo } from './api';
 import Intro from './components/Intro';
 import Navbar from './components/Navbar';
@@ -14,6 +15,8 @@ import Feedback from './pages/Feedback';
 import HowItWorks from './pages/HowItWorks';
 import FAQ from './pages/FAQ';
 import Admin from './pages/Admin';
+import Login from './pages/Login';
+import Cabinet from './pages/Cabinet';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -36,7 +39,9 @@ function DemoBanner() {
 
 function Layout() {
   const { pathname } = useLocation();
-  const hideFooter = pathname === '/admin';
+  // The cabinet screens are workspaces, not marketing pages; the marketing
+  // footer under them is only noise.
+  const hideFooter = ['/admin', '/login', '/cabinet'].includes(pathname);
   return (
     <>
       {pathname === '/' && <Intro />}
@@ -52,6 +57,8 @@ function Layout() {
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/cabinet" element={<Cabinet />} />
       </Routes>
       {!hideFooter && <Footer />}
     </>
@@ -66,10 +73,12 @@ const Router = process.env.REACT_APP_STANDALONE === '1' ? HashRouter : BrowserRo
 export default function App() {
   return (
     <LangProvider>
-      <Router>
-        <ScrollToTop />
-        <Layout />
-      </Router>
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Layout />
+        </Router>
+      </AuthProvider>
     </LangProvider>
   );
 }

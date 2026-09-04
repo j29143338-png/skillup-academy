@@ -78,3 +78,106 @@ export const getCourse = async (id) => {
 // Nothing is submitted in demo mode — there is no backend behind it to store it.
 export const submitApplication = (data) => (isDemo() ? Promise.resolve({ success: true }) : post('/apply', data));
 export const submitFeedback    = (data) => (isDemo() ? Promise.resolve({ success: true }) : post('/feedbacks', data));
+
+// ── Cabinets ────────────────────────────────────────────────────────────────
+// The bearer token lives in localStorage rather than a cookie: the site and the
+// API sit on different origins (Netlify / Render), which a cookie would need
+// SameSite=None to cross. It is cleared on logout and whenever the server says
+// the session is gone.
+const TOKEN_KEY = 'skillup_token';
+
+export const getToken = () => {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+};
+const setToken = (t) => {
+  try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* private window */ }
+};
+
+// Thrown so callers can show the server's own message instead of "Failed to
+// fetch". `status` lets the auth context tell an expired session from a typo.
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function authRequest(path, { method = 'GET', body } = {}) {
+  const token = getToken();
+  const res = await fetch(r(path), {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // A dead or expired token should not keep being sent on every later call.
+    if (res.status === 401) setToken(null);
+    throw new ApiError(payload.detail || res.statusText, res.status);
+  }
+  return payload;
+}
+
+const authGet = (path) => authRequest(path);
+const authPost = (path, body) => authRequest(path, { method: 'POST', body });
+const authPatch = (path, body) => authRequest(path, { method: 'PATCH', body });
+const authDelete = (path) => authRequest(path, { method: 'DELETE' });
+
+export const login = async (email, password) => {
+  const data = await authRequest('/auth/login', { method: 'POST', body: { email, password } });
+  setToken(data.token);
+  return data.user;
+};
+
+export const logout = async () => {
+  try { await authPost('/auth/logout'); } finally { setToken(null); }
+};
+
+export const fetchMe = () => authGet('/auth/me');
+export const changePassword = (current_password, new_password) =>
+  authPost('/auth/password/change', { current_password, new_password });
+export const forgotPassword = (email) => authPost('/auth/password/forgot', { email });
+export const resetPassword = (token, password) => authPost('/auth/password/reset', { token, password });
+
+// Student and parent. `studentId` is only meaningful for a parent with more
+// than one child; the server ignores it for a student.
+const withChild = (path, studentId) =>
+  studentId ? `${path}${path.includes('?') ? '&' : '?'}student_id=${studentId}` : path;
+
+export const getOverview   = (id) => authGet(withChild('/cabinet/overview', id));
+export const getSchedule   = (id) => authGet(withChild('/cabinet/schedule', id));
+export const getHomework   = (id) => authGet(withChild('/cabinet/homework', id));
+export const getAttendance = (id) => authGet(withChild('/cabinet/attendance', id));
+export const getPayments   = (id) => authGet(withChild('/cabinet/payments', id));
+export const submitHomework = (homeworkId, text) => authPost(`/cabinet/homework/${homeworkId}/submit`, { text });
+
+// Teacher
+export const getTeacherSchedule = () => authGet('/cabinet/teacher/schedule');
+export const getTeacherGroups   = () => authGet('/cabinet/teacher/groups');
+export const getTeacherStudents = () => authGet('/cabinet/teacher/students');
+export const getTeacherHomework = () => authGet('/cabinet/teacher/homework');
+export const getTeacherFinance  = () => authGet('/cabinet/teacher/finance');
+export const createHomework = (data) => authPost('/cabinet/teacher/homework', data);
+export const gradeHomework  = (id, data) => authPost(`/cabinet/teacher/homework/${id}/grade`, data);
+export const markAttendance = (data) => authPost('/cabinet/teacher/attendance', data);
+
+// Admin and owner
+export const getStaffUsers   = (role) => authGet(role ? `/cabinet/staff/users?role=${role}` : '/cabinet/staff/users');
+export const createStaffUser = (data) => authPost('/cabinet/staff/users', data);
+export const updateStaffUser = (id, data) => authPatch(`/cabinet/staff/users/${id}`, data);
+export const setUserPassword = (id, password) => authPost(`/cabinet/staff/users/${id}/password`, { password });
+export const getStaffStudent = (id) => authGet(`/cabinet/staff/students/${id}`);
+export const createContract  = (data) => authPost('/cabinet/staff/contracts', data);
+export const createPackage   = (data) => authPost('/cabinet/staff/packages', data);
+export const createSlot      = (data) => authPost('/cabinet/staff/schedule', data);
+export const deleteSlot      = (id) => authDelete(`/cabinet/staff/schedule/${id}`);
+export const createPayment   = (data) => authPost('/cabinet/staff/payments', data);
+export const createGroup     = (data) => authPost('/cabinet/staff/groups', data);
+export const addGroupMember  = (groupId, student_id) => authPost(`/cabinet/staff/groups/${groupId}/members`, { student_id });
+export const linkParent      = (data) => authPost('/cabinet/staff/parent-links', data);
+export const setTeacherRate  = (data) => authPost('/cabinet/staff/teacher-rate', data);
+export const getActionLog    = () => authGet('/cabinet/staff/log');
+export const getAnalytics    = () => authGet('/cabinet/staff/analytics');

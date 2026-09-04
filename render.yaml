@@ -19,6 +19,15 @@ services:
         sync: false
       - key: ALLOWED_ORIGIN
         sync: false
+      # First owner account for the cabinets. Set both in the Render dashboard;
+      # the server creates that account on start, or resets its password if it
+      # already exists. Every other account is made from the office cabinet.
+      - key: OWNER_EMAIL
+        sync: false
+      - key: OWNER_PASSWORD
+        sync: false
+      - key: OWNER_NAME
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: skillup-academy-db
