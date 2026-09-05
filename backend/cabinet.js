@@ -192,6 +192,25 @@ async function ensureCabinetSchema(pool) {
       currency TEXT NOT NULL DEFAULT 'UZS'
     );
 
+  `);
+
+  // Databases that already ran the earlier scaffolding have users and
+  // schedule_slots without these columns; CREATE TABLE IF NOT EXISTS leaves an
+  // existing table alone, so the columns have to be added explicitly.
+  //
+  // This must happen before the indexes below: indexing schedule_slots by
+  // teacher_id on a table that predates that column fails the whole batch, and
+  // then no cabinet works — which is exactly what the first deploy hit.
+  await pool.query(
+    `ALTER TABLE schedule_slots ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL`
+  );
+  await pool.query(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`
+  );
+
+  await repairForeignKeys(pool);
+
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON auth_sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_slots_student ON schedule_slots(student_id);
     CREATE INDEX IF NOT EXISTS idx_slots_teacher ON schedule_slots(teacher_id);
@@ -199,15 +218,55 @@ async function ensureCabinetSchema(pool) {
     CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
     CREATE INDEX IF NOT EXISTS idx_homework_group ON homework(group_id);
   `);
+}
 
-  // Older databases created schedule_slots without teacher_id (server.js used
-  // to own this table). Add it rather than making anyone drop the table.
-  await pool.query(
-    `ALTER TABLE schedule_slots ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL`
-  );
-  await pool.query(
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`
-  );
+// The four tables the earlier scaffolding created declared their foreign keys
+// without any ON DELETE behaviour, and CREATE TABLE IF NOT EXISTS will not
+// change an existing table. On such a database removing a person fails — the
+// contract still points at them — while on a fresh one the same delete cascades
+// cleanly. Two databases behaving differently is worse than either behaviour,
+// so bring the old ones up to the definitions above.
+//
+// Reads pg_constraint rather than assuming the "<table>_<column>_fkey" naming,
+// and only rewrites a constraint whose delete rule is actually wrong, so a
+// database already in good shape takes no locks.
+const FOREIGN_KEYS = [
+  { table: "contracts", column: "student_id", target: "users", onDelete: "CASCADE" },
+  { table: "lesson_packages", column: "student_id", target: "users", onDelete: "CASCADE" },
+  { table: "lesson_packages", column: "contract_id", target: "contracts", onDelete: "SET NULL" },
+  { table: "schedule_slots", column: "student_id", target: "users", onDelete: "CASCADE" },
+  { table: "action_log", column: "user_id", target: "users", onDelete: "SET NULL" },
+];
+
+// pg_constraint.confdeltype holds the delete rule as a single letter.
+const DELETE_RULE = { a: "NO ACTION", r: "RESTRICT", c: "CASCADE", n: "SET NULL", d: "SET DEFAULT" };
+
+async function repairForeignKeys(pool) {
+  for (const fk of FOREIGN_KEYS) {
+    const { rows } = await pool.query(
+      `SELECT c.conname, c.confdeltype
+         FROM pg_constraint c
+         JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+        WHERE c.contype = 'f'
+          AND c.conrelid = to_regclass($1)
+          AND a.attname = $2
+          AND array_length(c.conkey, 1) = 1`,
+      [`public.${fk.table}`, fk.column]
+    );
+    const existing = rows[0];
+    if (!existing) continue;
+    if (DELETE_RULE[existing.confdeltype] === fk.onDelete) continue;
+
+    await pool.query(`ALTER TABLE ${fk.table} DROP CONSTRAINT "${existing.conname}"`);
+    await pool.query(
+      `ALTER TABLE ${fk.table}
+         ADD CONSTRAINT "${existing.conname}"
+         FOREIGN KEY (${fk.column}) REFERENCES ${fk.target}(id) ON DELETE ${fk.onDelete}`
+    );
+    console.log(
+      `Repaired ${fk.table}.${fk.column}: ON DELETE ${DELETE_RULE[existing.confdeltype]} -> ${fk.onDelete}`
+    );
+  }
 }
 
 // The first owner cannot be created through the UI — nobody is logged in yet.
