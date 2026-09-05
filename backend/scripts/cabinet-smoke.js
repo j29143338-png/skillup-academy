@@ -294,6 +294,36 @@ async function main() {
       (await call("/cabinet/staff/log", { token: adminToken })).body.some((r) => r.action === "attendance.delete")
     );
 
+    console.log("\nPutting a group on the timetable");
+    const scheduled = await call(`/cabinet/staff/groups/${group.id}/schedule`, {
+      method: "POST",
+      token: adminToken,
+      body: { weekday: 3, time: "18:00" },
+    });
+    check("one lesson lands on every member", scheduled.body.created === 1, JSON.stringify(scheduled.body));
+    check(
+      "and the group's teacher is the one on it",
+      (await call("/cabinet/teacher/schedule", { token: teacherToken })).body.slots.some(
+        (s) => s.time === "18:00" && s.format === "group" && s.student_id === student.id
+      )
+    );
+    check(
+      "an impossible weekday is refused",
+      (await call(`/cabinet/staff/groups/${group.id}/schedule`, {
+        method: "POST",
+        token: adminToken,
+        body: { weekday: 99, time: "18:00" },
+      })).status === 400
+    );
+    check(
+      "scheduling a group that does not exist is a 404, not a silent no-op",
+      (await call("/cabinet/staff/groups/999999/schedule", {
+        method: "POST",
+        token: adminToken,
+        body: { weekday: 3, time: "18:00" },
+      })).status === 404
+    );
+
     console.log("\nA student leaves");
     // Leaving is turning the account off. The person stops being able to sign
     // in and drops off the teachers' screens; the money and the attendance stay,

@@ -783,9 +783,11 @@ function StaffCabinet({ tab }) {
 function StaffStudents() {
   const { t, lang } = useLang();
   const students = useAsync(() => api.getStaffUsers('student'), []);
-  const teachers = useAsync(() => api.getStaffUsers('teacher'), []);
-  const parents = useAsync(() => api.getStaffUsers('parent'), []);
+  const teachers = useAsync(() => api.getStaffUsers('teacher', '1'), []);
+  const parents = useAsync(() => api.getStaffUsers('parent', '1'), []);
+  const groups = useAsync(() => api.getStaffGroups(), []);
   const [picked, setPicked] = useState('');
+  const [groupId, setGroupId] = useState('');
   const [error, setError] = useState('');
   const detail = useAsync(
     () => (picked ? api.getStaffStudent(picked) : Promise.resolve(null)),
@@ -1041,12 +1043,42 @@ function StaffStudents() {
                 </div>
               </div>
 
-              {d.groups.length > 0 && (
-                <div className="cab-card">
-                  <h3>{t('cab_tab_groups')}</h3>
-                  <ul className="cab-list">{d.groups.map((g) => <li key={g.id}>{g.name}</li>)}</ul>
+              {/* Putting a student in a group is also what gives that group's
+                  teacher access to them, so it belongs on this screen and not
+                  only under Groups. */}
+              <div className="cab-card">
+                <h3>{t('cab_tab_groups')}</h3>
+                {d.groups.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+                {d.groups.map((g) => (
+                  <div className="cab-row" key={g.id}>
+                    <span>{g.name}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.removeGroupMember(g.id, Number(picked)))}>
+                      {t('cab_delete')}
+                    </button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label className="cab-wide">
+                    {t('cab_tab_groups')}
+                    <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+                      <option value="">—</option>
+                      {(groups.data || [])
+                        .filter((g) => !d.groups.some((own) => own.id === g.id))
+                        .map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}{g.teacher_name ? ` · ${g.teacher_name}` : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <button type="button" disabled={!groupId}
+                          onClick={() => run(
+                            () => api.addGroupMember(Number(groupId), Number(picked)),
+                            () => setGroupId('')
+                          )}>{t('cab_add')}</button>
                 </div>
-              )}
+              </div>
             </>
           )}
         </Panel>
@@ -1057,13 +1089,15 @@ function StaffStudents() {
 
 // ── Office: groups and teacher pay ──────────────────────────────────────────
 function StaffGroups() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const groups = useAsync(() => api.getStaffGroups(), []);
-  const teachers = useAsync(() => api.getStaffUsers('teacher'), []);
-  const students = useAsync(() => api.getStaffUsers('student'), []);
+  const teachers = useAsync(() => api.getStaffUsers('teacher', '1'), []);
+  const students = useAsync(() => api.getStaffUsers('student', '1'), []);
   const rates = useAsync(() => api.getTeacherRates(), []);
   const [form, setForm] = useState({ name: '', teacher_id: '' });
   const [member, setMember] = useState({});
+  // Per-group draft of a lesson slot, keyed by group id.
+  const [lesson, setLesson] = useState({});
   const [rate, setRate] = useState({ teacher_id: '', per_lesson: '', tax_percent: '' });
   const [error, setError] = useState('');
 
@@ -1137,6 +1171,34 @@ function StaffGroups() {
                         () => api.addGroupMember(g.id, Number(member[g.id])),
                         () => setMember({ ...member, [g.id]: '' })
                       )}>{t('cab_add')}</button>
+            </div>
+
+            {/* One lesson for everyone in the group at once. Typing the same
+                Tuesday six o'clock four times over is how a simple change
+                turns into a job for somebody else. */}
+            <div className="cab-form cab-form-row">
+              <label>
+                {t('cab_weekday')}
+                <select value={(lesson[g.id] || {}).weekday ?? '1'}
+                        onChange={(e) => setLesson({ ...lesson, [g.id]: { ...lesson[g.id], weekday: e.target.value } })}>
+                  {[1, 2, 3, 4, 5, 6, 0].map((n) => (
+                    <option key={n} value={n}>{weekdayName(lang, n)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t('cab_time')}
+                <input type="time" value={(lesson[g.id] || {}).time || ''}
+                       onChange={(e) => setLesson({ ...lesson, [g.id]: { ...lesson[g.id], time: e.target.value } })} />
+              </label>
+              <button type="button" disabled={!(lesson[g.id] || {}).time || g.students.length === 0}
+                      onClick={() => run(
+                        () => api.scheduleGroup(g.id, {
+                          weekday: Number((lesson[g.id] || {}).weekday ?? 1),
+                          time: lesson[g.id].time,
+                        }),
+                        () => setLesson({ ...lesson, [g.id]: { ...lesson[g.id], time: '' } })
+                      )}>{t('cab_schedule_group')}</button>
             </div>
           </div>
         ))}

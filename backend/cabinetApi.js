@@ -834,6 +834,46 @@ function cabinetRouter({ pool, rateLimit, clean }) {
     res.json({ success: true });
   });
 
+  // One slot for the whole group. A group of four sharing a Tuesday six o'clock
+  // is four identical rows, and typing them out one at a time is exactly the
+  // kind of chore that sends the office looking for a developer.
+  router.post("/cabinet/staff/groups/:id/schedule", ...asStaff, async (req, res) => {
+    const groupId = int(req.params.id);
+    const weekday = int(req.body?.weekday);
+    const time = clean(req.body?.time, 20);
+    if (weekday == null || weekday < 0 || weekday > 6) {
+      return res.status(400).json({ detail: "weekday must be 0..6" });
+    }
+    if (!time) return res.status(400).json({ detail: "time is required" });
+
+    const group = await pool.query("SELECT teacher_id FROM groups WHERE id = $1", [groupId]);
+    if (!group.rows[0]) return res.status(404).json({ detail: "Group not found" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      // Only members who are still here: a leaver stays in the group for the
+      // record but must not reappear on anybody's timetable.
+      const { rows } = await client.query(
+        `INSERT INTO schedule_slots (student_id, teacher_id, weekday, time, format)
+         SELECT gm.student_id, $2, $3, $4, 'group'
+           FROM group_members gm JOIN users u ON u.id = gm.student_id
+          WHERE gm.group_id = $1 AND u.is_active
+         RETURNING id`,
+        [groupId, group.rows[0].teacher_id, weekday, time]
+      );
+      await client.query("COMMIT");
+      await log(req.user.id, "group.schedule", `group:${groupId} ${weekday} ${time} x${rows.length}`);
+      res.json({ success: true, created: rows.length });
+    } catch (e) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error("group.schedule failed:", e.message);
+      res.status(500).json({ detail: "Could not add the lesson" });
+    } finally {
+      client.release();
+    }
+  });
+
   router.delete("/cabinet/staff/groups/:id/members/:studentId", ...asStaff, async (req, res) => {
     await pool.query("DELETE FROM group_members WHERE group_id = $1 AND student_id = $2", [
       int(req.params.id),

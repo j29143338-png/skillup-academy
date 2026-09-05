@@ -184,6 +184,8 @@ export const deleteSlot      = (id) => authDelete(`/cabinet/staff/schedule/${id}
 export const createPayment   = (data) => authPost('/cabinet/staff/payments', data);
 export const createGroup     = (data) => authPost('/cabinet/staff/groups', data);
 export const addGroupMember  = (groupId, student_id) => authPost(`/cabinet/staff/groups/${groupId}/members`, { student_id });
+// One lesson slot for every active member of a group, in a single request.
+export const scheduleGroup   = (groupId, data) => authPost(`/cabinet/staff/groups/${groupId}/schedule`, data);
 export const linkParent      = (data) => authPost('/cabinet/staff/parent-links', data);
 export const setTeacherRate  = (data) => authPost('/cabinet/staff/teacher-rate', data);
 export const getActionLog    = () => authGet('/cabinet/staff/log');

@@ -374,6 +374,7 @@ export const translations = {
     cab_no_active_children: "no children here any more",
     cab_leaving_note: "Turning an account off is how someone leaves: they can no longer sign in and they drop off the teachers' lists, while payments, attendance and contracts stay on the record. Nothing is ever deleted, so a returning student picks up where they left off.",
     cab_parent_orphan_note: "Parents with no children here any more are worth turning off too.",
+    cab_schedule_group: "Add for the whole group",
   },
 
   ru: {
@@ -734,6 +735,7 @@ export const translations = {
     cab_no_active_children: "дети больше не занимаются",
     cab_leaving_note: "Уход оформляется отключением аккаунта: человек больше не может войти и пропадает из списков преподавателей, а оплаты, посещаемость и договоры остаются в отчётности. Ничего не удаляется — если ученик вернётся, всё на месте.",
     cab_parent_orphan_note: "Родителей, у которых больше никто не занимается, тоже стоит отключить.",
+    cab_schedule_group: "Поставить всей группе",
   },
 
   uz: {
@@ -1092,6 +1094,7 @@ export const translations = {
     cab_no_active_children: "farzandlari endi o‘qimaydi",
     cab_leaving_note: "Ketish hisobni o‘chirish orqali rasmiylashtiriladi: odam kira olmaydi va o‘qituvchilar ro‘yxatidan chiqadi, to‘lovlar, davomat va shartnomalar esa hisobotda qoladi. Hech narsa o‘chirilmaydi — o‘quvchi qaytsa, hammasi joyida.",
     cab_parent_orphan_note: "Farzandi endi o‘qimaydigan ota-onalarni ham o‘chirib qo‘ygan ma‘qul.",
+    cab_schedule_group: "Butun guruhga qo‘yish",
   }
 };
 
