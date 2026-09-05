@@ -199,6 +199,9 @@ async function main() {
     check("student sees 11 lessons left of 12", overview.package.lessons_left === 11, JSON.stringify(overview.package));
     check("contract and package are separate numbers",
       overview.contract.term_months === 12 && overview.package.package_size === 12);
+    check("the student is told which group they are in and who teaches it",
+      overview.groups.some((g) => g.id === group.id && g.teacher_name === "teacher a"),
+      JSON.stringify(overview.groups));
     const studentHw = (await call("/cabinet/homework", { token: studentToken })).body;
     check("group homework reaches the student", studentHw.some((h) => h.id === hw.id));
     check(
@@ -265,6 +268,47 @@ async function main() {
       (await call("/cabinet/staff/teacher-rates", { token: adminToken })).body.some(
         (r) => r.teacher_id === teacher.id
       ));
+
+    console.log("\nThe journal");
+    check(
+      "the student is NOT shown their own journal",
+      (await call(`/cabinet/journal?student_id=${student.id}`, { token: studentToken })).status === 403
+    );
+    check(
+      "a teacher reads the journal of a student they teach",
+      (await call(`/cabinet/journal?student_id=${student.id}`, { token: teacherToken })).status === 200
+    );
+    check(
+      "but not of one they do not",
+      (await call(`/cabinet/journal?student_id=${other.id}`, { token: teacherToken })).status === 403
+    );
+    check(
+      "a parent reads their child's without naming them",
+      (await call("/cabinet/journal", { token: parentToken })).body.student.id === student.id
+    );
+    check(
+      "a parent may NOT write a remark",
+      (await call("/cabinet/journal/notes", {
+        method: "POST",
+        token: parentToken,
+        body: { student_id: student.id, text: "not allowed" },
+      })).status === 403
+    );
+    check(
+      "the teacher writes one",
+      (await call("/cabinet/journal/notes", {
+        method: "POST",
+        token: teacherToken,
+        body: { student_id: student.id, text: "Хорошо продвигается в speaking" },
+      })).status === 200
+    );
+    const journal = (await call(`/cabinet/journal?student_id=${student.id}`, { token: adminToken })).body;
+    check("the office sees the remark", journal.notes.some((n) => n.text.includes("speaking")));
+    check("the journal counts homework not handed in",
+      journal.totals.homework_set > 0 && typeof journal.totals.homework_missing === "number",
+      JSON.stringify(journal.totals));
+    check("and counts attendance",
+      journal.totals.lessons === journal.totals.present + journal.totals.missed);
 
     console.log("\nCorrections");
     const attendanceId = card.attendance_records[0].id;

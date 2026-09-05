@@ -271,7 +271,7 @@ function cabinetRouter({ pool, rateLimit, clean }) {
     const subject = await resolveSubject(req, res);
     if (subject == null) return;
 
-    const [student, contract, pkg, attendance, nextHomework] = await Promise.all([
+    const [student, contract, pkg, attendance, nextHomework, groups] = await Promise.all([
       pool.query("SELECT id, full_name, email FROM users WHERE id = $1", [subject]),
       pool.query(
         `SELECT id, contract_start, contract_end FROM contracts
@@ -295,6 +295,17 @@ function cabinetRouter({ pool, rateLimit, clean }) {
           ORDER BY h.due_date NULLS LAST, h.id DESC LIMIT 5`,
         [subject]
       ),
+      // Which group they are in and who teaches it. Obvious to the office and
+      // to the teacher, and until now invisible to the person actually
+      // attending — the schedule said "group" without saying which one.
+      pool.query(
+        `SELECT g.id, g.name, t.full_name AS teacher_name
+           FROM group_members gm
+           JOIN groups g ON g.id = gm.group_id
+           LEFT JOIN users t ON t.id = g.teacher_id
+          WHERE gm.student_id = $1 ORDER BY g.name`,
+        [subject]
+      ),
     ]);
 
     res.json({
@@ -305,6 +316,7 @@ function cabinetRouter({ pool, rateLimit, clean }) {
       package: pkg,
       attendance: attendance.rows[0],
       homework_due: nextHomework.rows,
+      groups: groups.rows,
     });
   });
 
@@ -597,6 +609,137 @@ function cabinetRouter({ pool, rateLimit, clean }) {
       return { month: m.month, lessons: m.lessons, net: Math.round(net) };
     });
     res.json({ configured: true, currency, tax_percent: Number(tax_percent), months, shows: "net of withholding" });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // THE JOURNAL
+  // Everyone around a student can see how they are getting on — the teacher,
+  // the parent and the office — and the student cannot. Attendance and
+  // homework they already see for themselves; the remarks are the part that
+  // is deliberately not theirs to read.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // Says who may look at this student, or why not. One place, so a new screen
+  // cannot accidentally widen the audience.
+  async function mayReadJournal(user, studentId) {
+    if (user.role === "student") return "The journal is not shown to students";
+    if (STAFF.includes(user.role)) return null;
+    if (user.role === "teacher") {
+      return (await teachesStudent(user.id, studentId)) ? null : "Not your student";
+    }
+    if (user.role === "parent") {
+      const { rows } = await pool.query(
+        "SELECT 1 FROM parent_links WHERE parent_id = $1 AND student_id = $2",
+        [user.id, studentId]
+      );
+      return rows.length ? null : "Not your child";
+    }
+    return "Not allowed for this role";
+  }
+
+  // A parent normally has one child and need not name them.
+  async function journalSubject(req) {
+    const asked = int(req.query.student_id);
+    if (asked != null) return asked;
+    if (req.user.role === "parent") {
+      const { rows } = await pool.query(
+        "SELECT student_id FROM parent_links WHERE parent_id = $1 ORDER BY student_id LIMIT 1",
+        [req.user.id]
+      );
+      return rows[0] ? rows[0].student_id : null;
+    }
+    return null;
+  }
+
+  router.get("/cabinet/journal", requireDb, requireAuth, async (req, res) => {
+    const studentId = await journalSubject(req);
+    if (studentId == null) return res.status(404).json({ detail: "No student to show" });
+    const refusal = await mayReadJournal(req.user, studentId);
+    if (refusal) return res.status(403).json({ detail: refusal });
+
+    const [student, attendance, homework, notes] = await Promise.all([
+      pool.query("SELECT id, full_name, email FROM users WHERE id = $1", [studentId]),
+      pool.query(
+        `SELECT a.id, a.lesson_date, a.status, a.comment, t.full_name AS teacher_name
+           FROM attendance a LEFT JOIN users t ON t.id = a.teacher_id
+          WHERE a.student_id = $1 ORDER BY a.lesson_date DESC LIMIT 200`,
+        [studentId]
+      ),
+      // Every task set to this student, with whether they turned it in. A
+      // LEFT JOIN, so a missing submission shows up as a row rather than
+      // vanishing — not doing the homework is the thing worth seeing.
+      pool.query(
+        `SELECT DISTINCT h.id, h.title, h.due_date, h.created_at,
+                s.submitted_at, s.grade, s.teacher_comment,
+                t.full_name AS teacher_name
+           FROM homework h
+           LEFT JOIN group_members gm ON gm.group_id = h.group_id
+           LEFT JOIN homework_submissions s ON s.homework_id = h.id AND s.student_id = $1
+           LEFT JOIN users t ON t.id = h.teacher_id
+          WHERE h.student_id = $1 OR gm.student_id = $1
+          ORDER BY h.due_date DESC NULLS LAST, h.id DESC LIMIT 200`,
+        [studentId]
+      ),
+      pool.query(
+        `SELECT n.id, n.text, n.created_at, u.full_name AS author_name, u.role AS author_role
+           FROM student_notes n LEFT JOIN users u ON u.id = n.author_id
+          WHERE n.student_id = $1 ORDER BY n.created_at DESC LIMIT 200`,
+        [studentId]
+      ),
+    ]);
+    if (!student.rows[0]) return res.status(404).json({ detail: "Student not found" });
+
+    const present = attendance.rows.filter((a) => a.status === "present").length;
+    const done = homework.rows.filter((h) => h.submitted_at).length;
+    res.json({
+      student: student.rows[0],
+      attendance: attendance.rows,
+      homework: homework.rows,
+      notes: notes.rows,
+      totals: {
+        lessons: attendance.rows.length,
+        present,
+        missed: attendance.rows.length - present,
+        homework_set: homework.rows.length,
+        homework_done: done,
+        homework_missing: homework.rows.length - done,
+      },
+    });
+  });
+
+  // Parents read the journal; they do not write in it.
+  router.post("/cabinet/journal/notes", requireDb, requireAuth, async (req, res) => {
+    const studentId = int(req.body?.student_id);
+    const text = clean(req.body?.text, 2000);
+    if (studentId == null || !text) {
+      return res.status(400).json({ detail: "student_id and text are required" });
+    }
+    if (!STAFF.includes(req.user.role) && req.user.role !== "teacher") {
+      return res.status(403).json({ detail: "Only a teacher or the office can write a remark" });
+    }
+    const refusal = await mayReadJournal(req.user, studentId);
+    if (refusal) return res.status(403).json({ detail: refusal });
+
+    const { rows } = await pool.query(
+      `INSERT INTO student_notes (student_id, author_id, text) VALUES ($1, $2, $3) RETURNING id, created_at`,
+      [studentId, req.user.id, text]
+    );
+    await log(req.user.id, "note.create", `student:${studentId}`);
+    res.json(rows[0]);
+  });
+
+  // Authors take back their own; the office can take back anybody's.
+  router.delete("/cabinet/journal/notes/:id", requireDb, requireAuth, async (req, res) => {
+    const id = int(req.params.id);
+    const { rows } = await pool.query("SELECT author_id, student_id FROM student_notes WHERE id = $1", [id]);
+    if (!rows[0]) return res.status(404).json({ detail: "Not found" });
+    const mine = rows[0].author_id === req.user.id;
+    if (!mine && !STAFF.includes(req.user.role)) {
+      return res.status(403).json({ detail: "You can only remove your own remarks" });
+    }
+    await pool.query("DELETE FROM student_notes WHERE id = $1", [id]);
+    await log(req.user.id, "note.delete", `note:${id}`);
+    res.json({ success: true });
   });
 
   // ───────────────────────────────────────────────────────────────────────────

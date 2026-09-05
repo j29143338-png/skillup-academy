@@ -184,6 +184,21 @@ function LearnerCabinet({ tab, childId }) {
               ) : <p className="cab-muted">{t('cab_none')}</p>}
               <p className="cab-muted">{t('cab_package_note')}</p>
             </div>
+            {/* Which group, and who teaches it. The schedule only ever said
+                "group" as a format, which told the person attending nothing. */}
+            {d.groups.length > 0 && (
+              <div className="cab-card">
+                <h3>{t('cab_tab_groups')}</h3>
+                <ul className="cab-list">
+                  {d.groups.map((g) => (
+                    <li key={g.id}>
+                      {g.name}
+                      {g.teacher_name && <span className="cab-muted"> · {g.teacher_name}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {d.homework_due.length > 0 && (
               <div className="cab-card">
                 <h3>{t('cab_tab_homework')}</h3>
@@ -261,6 +276,8 @@ function LearnerCabinet({ tab, childId }) {
       </Panel>
     );
   }
+
+  if (tab === 'journal') return <Journal studentId={childId || undefined} canWrite={false} />;
 
   if (tab === 'attendance') {
     const records = attendance.data?.records || [];
@@ -371,6 +388,8 @@ function TeacherCabinet({ tab }) {
       </Panel>
     );
   }
+
+  if (tab === 'journal') return <TeacherJournal />;
 
   if (tab === 'groups') {
     const rows = groups.data || [];
@@ -1044,6 +1063,10 @@ function StaffStudents() {
                 </div>
               </div>
 
+              {/* The office writes remarks too — it is often the front desk
+                  that hears from a parent, not the teacher. */}
+              <Journal studentId={picked} canWrite />
+
               {/* Putting a student in a group is also what gives that group's
                   teacher access to them, so it belongs on this screen and not
                   only under Groups. */}
@@ -1084,6 +1107,147 @@ function StaffStudents() {
           )}
         </Panel>
       )}
+    </>
+  );
+}
+
+// ── The journal ─────────────────────────────────────────────────────────────
+// One screen shared by the teacher, the parent and the office, because they are
+// all asking the same question about the same person. The student is not shown
+// it — the server refuses them, so this is not a matter of hiding a menu item.
+function Journal({ studentId, canWrite }) {
+  const { t } = useLang();
+  const journal = useAsync(
+    () => (studentId === undefined || studentId ? api.getJournal(studentId) : Promise.resolve(null)),
+    [studentId]
+  );
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+
+  const d = journal.data;
+
+  const write = async () => {
+    setError('');
+    try {
+      await api.addNote(d.student.id, note);
+      setNote('');
+      journal.reload();
+    } catch (e) { setError(e.message); }
+  };
+
+  const remove = async (id) => {
+    setError('');
+    try {
+      await api.deleteNote(id);
+      journal.reload();
+    } catch (e) { setError(e.message); }
+  };
+
+  return (
+    <Panel state={journal} empty={!d}>
+      {d && (
+        <>
+          {error && <p className="cab-error">{error}</p>}
+          <p className="cab-note">{t('cab_journal_hint')}</p>
+
+          <div className="cab-stats">
+            <Stat label={t('cab_present')} value={d.totals.present} />
+            <Stat label={t('cab_missed')} value={d.totals.missed} />
+            <Stat label={t('cab_hw_done')} value={d.totals.homework_done}
+                  hint={`${t('cab_hw_set')}: ${d.totals.homework_set}`} />
+            <Stat label={t('cab_hw_missing')} value={d.totals.homework_missing} />
+          </div>
+
+          <div className="cab-card">
+            <h3>{t('cab_notes')}</h3>
+            <p className="cab-muted">{t('cab_note_private')}</p>
+            {d.notes.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+            {d.notes.map((n) => (
+              <div className="cab-row" key={n.id}>
+                <span>
+                  {n.text}
+                  <span className="cab-muted">
+                    {' · '}{n.author_name || '—'} · {asDate(n.created_at)}
+                  </span>
+                </span>
+                {canWrite && (
+                  <button type="button" className="cab-btn-ghost" onClick={() => remove(n.id)}>
+                    {t('cab_delete')}
+                  </button>
+                )}
+              </div>
+            ))}
+            {canWrite && (
+              <div className="cab-form cab-form-row">
+                <label className="cab-wide">
+                  {t('cab_note_text')}
+                  <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+                </label>
+                <button type="button" disabled={!note.trim()} onClick={write}>{t('cab_add_note')}</button>
+              </div>
+            )}
+          </div>
+
+          <div className="cab-card">
+            <h3>{t('cab_tab_attendance')}</h3>
+            {d.attendance.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+            {d.attendance.map((a) => (
+              <div className="cab-row" key={a.id}>
+                <span>
+                  <span className={a.status === 'present' ? 'cab-ok' : 'cab-warn'}>
+                    {asDate(a.lesson_date)} · {a.status === 'present' ? t('cab_present') : t('cab_missed')}
+                  </span>
+                  {a.comment && <span className="cab-muted"> · {a.comment}</span>}
+                  {a.teacher_name && <span className="cab-muted"> · {a.teacher_name}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="cab-card">
+            <h3>{t('cab_tab_homework')}</h3>
+            {d.homework.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+            {d.homework.map((h) => (
+              <div className="cab-row" key={h.id}>
+                <span>
+                  {h.title}
+                  <span className="cab-muted"> · {t('cab_due')}: {asDate(h.due_date)}</span>
+                  {' · '}
+                  <span className={h.submitted_at ? 'cab-ok' : 'cab-warn'}>
+                    {h.submitted_at ? `${t('cab_hw_done')} ${asDate(h.submitted_at)}` : t('cab_hw_missing')}
+                  </span>
+                  {h.grade && <span> · {t('cab_grade')}: {h.grade}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Panel>
+  );
+}
+
+// The teacher picks whose journal to read; the parent's child is implied.
+function TeacherJournal() {
+  const { t } = useLang();
+  const students = useAsync(() => api.getTeacherStudents(), []);
+  const [picked, setPicked] = useState('');
+
+  return (
+    <>
+      <div className="cab-form cab-form-row cab-card">
+        <label className="cab-wide">
+          {t('cab_pick_student')}
+          <select value={picked} onChange={(e) => setPicked(e.target.value)}>
+            <option value="">—</option>
+            {(students.data || []).map((s) => (
+              <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {picked ? <Journal studentId={picked} canWrite />
+              : <p className="cab-muted">{t('cab_journal_no_student')}</p>}
     </>
   );
 }
@@ -1388,8 +1552,8 @@ function StaffGroups() {
 // ── Shell ───────────────────────────────────────────────────────────────────
 const TABS = {
   student: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
-  parent: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
-  teacher: ['schedule', 'groups', 'students', 'homework', 'finance', 'password'],
+  parent: ['overview', 'journal', 'schedule', 'homework', 'attendance', 'payments', 'password'],
+  teacher: ['schedule', 'groups', 'students', 'journal', 'homework', 'finance', 'password'],
   admin: ['applications', 'students', 'groups', 'people', 'log', 'password'],
   owner: ['applications', 'students', 'groups', 'people', 'log', 'analytics', 'password'],
 };

@@ -211,3 +211,11 @@ export const deletePayment    = (id) => authDelete(`/cabinet/staff/payments/${id
 export const deletePackage    = (id) => authDelete(`/cabinet/staff/lesson_packages/${id}`);
 export const deleteContract   = (id) => authDelete(`/cabinet/staff/contracts/${id}`);
 export const deleteAttendance = (id) => authDelete(`/cabinet/staff/attendance/${id}`);
+
+// The journal: attendance, homework and remarks about one student. Read by
+// their teacher, their parent and the office — never by the student, which the
+// server enforces rather than the menu.
+export const getJournal   = (studentId) =>
+  authGet(studentId ? `/cabinet/journal?student_id=${studentId}` : '/cabinet/journal');
+export const addNote      = (student_id, text) => authPost('/cabinet/journal/notes', { student_id, text });
+export const deleteNote   = (id) => authDelete(`/cabinet/journal/notes/${id}`);

@@ -391,6 +391,19 @@ export const translations = {
     cab_app_note: "How it went",
     cab_app_hint: "An application becomes a student here: enrolling creates the account and marks the application done. Everything after that is on the Students tab.",
     cab_app_created: "Student created and the application marked enrolled.",
+
+    // Journal
+    cab_tab_journal: "Journal",
+    cab_journal_hint: "How this student is getting on: attendance, homework and remarks. Teachers, parents and the office see it; the student does not.",
+    cab_notes: "Remarks",
+    cab_add_note: "Add a remark",
+    cab_note_text: "What to note",
+    cab_note_private: "Remarks are not shown to the student.",
+    cab_hw_done: "handed in",
+    cab_hw_missing: "not handed in",
+    cab_hw_set: "set",
+    cab_journal_no_student: "No student to show yet.",
+    cab_author: "by",
   },
 
   ru: {
@@ -768,6 +781,19 @@ export const translations = {
     cab_app_note: "Как прошло",
     cab_app_hint: "Заявка превращается в ученика прямо здесь: кнопка создаёт аккаунт и помечает заявку зачисленной. Всё дальнейшее — во вкладке «Ученики».",
     cab_app_created: "Ученик создан, заявка помечена зачисленной.",
+
+    // Журнал
+    cab_tab_journal: "Журнал",
+    cab_journal_hint: "Как идут дела у ученика: посещаемость, домашние задания и замечания. Видят преподаватель, родитель и администрация; сам ученик — нет.",
+    cab_notes: "Замечания",
+    cab_add_note: "Добавить замечание",
+    cab_note_text: "Что отметить",
+    cab_note_private: "Замечания ученику не показываются.",
+    cab_hw_done: "сдано",
+    cab_hw_missing: "не сдано",
+    cab_hw_set: "задано",
+    cab_journal_no_student: "Пока некого показать.",
+    cab_author: "автор",
   },
 
   uz: {
@@ -1143,6 +1169,19 @@ export const translations = {
     cab_app_note: "Qanday o‘tdi",
     cab_app_hint: "Ariza shu yerda o‘quvchiga aylanadi: tugma hisob yaratadi va arizani qabul qilingan deb belgilaydi. Qolgani — «O‘quvchilar» bo‘limida.",
     cab_app_created: "O‘quvchi yaratildi, ariza qabul qilingan deb belgilandi.",
+
+    // Jurnal
+    cab_tab_journal: "Jurnal",
+    cab_journal_hint: "O‘quvchining ishlari: davomat, uyga vazifa va izohlar. O‘qituvchi, ota-ona va ma‘muriyat ko‘radi; o‘quvchining o‘zi ko‘rmaydi.",
+    cab_notes: "Izohlar",
+    cab_add_note: "Izoh qo‘shish",
+    cab_note_text: "Nimani qayd etish",
+    cab_note_private: "Izohlar o‘quvchiga ko‘rsatilmaydi.",
+    cab_hw_done: "topshirilgan",
+    cab_hw_missing: "topshirilmagan",
+    cab_hw_set: "berilgan",
+    cab_journal_no_student: "Hozircha ko‘rsatadigan o‘quvchi yo‘q.",
+    cab_author: "muallif",
   }
 };
 

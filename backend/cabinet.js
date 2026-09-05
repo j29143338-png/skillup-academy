@@ -183,6 +183,19 @@ async function ensureCabinetSchema(pool) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    -- Remarks about a student, written by their teacher or by the office.
+    -- Read by the teacher, the parent and the office; deliberately never by
+    -- the student. A note is a message between the adults about how somebody
+    -- is getting on, and it stops being written honestly the moment its
+    -- subject can read it.
+    CREATE TABLE IF NOT EXISTS student_notes (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      text TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
     -- Teacher pay. tax_percent is what gets withheld; the cabinet only ever
     -- shows the net figure, per ARCHITECTURE.md.
     CREATE TABLE IF NOT EXISTS teacher_rates (
@@ -217,6 +230,7 @@ async function ensureCabinetSchema(pool) {
     CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
     CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
     CREATE INDEX IF NOT EXISTS idx_homework_group ON homework(group_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_student ON student_notes(student_id);
   `);
 }
 
