@@ -354,6 +354,16 @@ export const translations = {
     cab_rates: "Teacher pay",
     cab_contract_hint: "The end date is set automatically: the term is always 12 months.",
     cab_package_hint: "A package is 12 lessons by default. It is counted separately from the contract term.",
+
+    // Password handover
+    cab_show: "Show",
+    cab_hide: "Hide",
+    cab_copy: "Copy",
+    cab_copied: "Copied",
+    cab_generate: "Generate",
+    cab_new_account: "Account created. Hand these over now — the password is stored one-way and cannot be read back later.",
+    cab_password_note: "Passwords cannot be looked up afterwards, by anyone. If one is lost, set a new one here.",
+    cab_account_for: "Account for",
   },
 
   ru: {
@@ -694,6 +704,16 @@ export const translations = {
     cab_rates: "Оплата преподавателям",
     cab_contract_hint: "Дата окончания ставится сама: срок всегда 12 месяцев.",
     cab_package_hint: "По умолчанию пакет — 12 занятий. Считается отдельно от срока договора.",
+
+    // Передача пароля
+    cab_show: "Показать",
+    cab_hide: "Скрыть",
+    cab_copy: "Скопировать",
+    cab_copied: "Скопировано",
+    cab_generate: "Придумать",
+    cab_new_account: "Аккаунт создан. Передайте данные сейчас — пароль хранится необратимо и посмотреть его потом не получится.",
+    cab_password_note: "Посмотреть пароль позже нельзя никому. Если он потерян — задайте здесь новый.",
+    cab_account_for: "Аккаунт для",
   },
 
   uz: {
@@ -1032,6 +1052,16 @@ export const translations = {
     cab_rates: "O‘qituvchilar to‘lovi",
     cab_contract_hint: "Tugash sanasi avtomatik qo‘yiladi: muddat doim 12 oy.",
     cab_package_hint: "Standart paket — 12 dars. Shartnoma muddatidan alohida hisoblanadi.",
+
+    // Parolni topshirish
+    cab_show: "Ko‘rsatish",
+    cab_hide: "Yashirish",
+    cab_copy: "Nusxalash",
+    cab_copied: "Nusxalandi",
+    cab_generate: "Yaratish",
+    cab_new_account: "Hisob yaratildi. Ma‘lumotlarni hozir bering — parol qaytarib bo‘lmaydigan tarzda saqlanadi va keyin ko‘rib bo‘lmaydi.",
+    cab_password_note: "Parolni keyinchalik hech kim ko‘ra olmaydi. Yo‘qolgan bo‘lsa — shu yerda yangisini belgilang.",
+    cab_account_for: "Hisob egasi",
   }
 };
 

@@ -294,6 +294,30 @@ async function main() {
       (await call("/cabinet/staff/log", { token: adminToken })).body.some((r) => r.action === "attendance.delete")
     );
 
+    console.log("\nCatalogue panel");
+    // The older /admin panel now accepts a cabinet session, which is what lets
+    // the shared ADMIN_PASSWORD be deleted entirely.
+    check(
+      "an admin's cabinet session opens the catalogue panel",
+      (await call("/admin/applications", { token: adminToken })).status === 200
+    );
+    check(
+      "an owner's session opens it too",
+      (await call("/admin/applications", { token: ownerToken })).status === 200
+    );
+    check(
+      "a teacher's session does NOT",
+      (await call("/admin/applications", { token: teacherToken })).status === 401
+    );
+    check(
+      "a student's session does NOT",
+      (await call("/admin/applications", { token: studentToken })).status === 401
+    );
+    check(
+      "no session at all does NOT",
+      (await call("/admin/applications")).status === 401
+    );
+
     console.log("\nSessions");
     check("logout kills the token",
       (await call("/auth/logout", { method: "POST", token: studentToken })).status === 200 &&

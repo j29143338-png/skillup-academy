@@ -25,7 +25,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
-const { ensureCabinetSchema, ensureOwner } = require("./cabinet");
+const { ensureCabinetSchema, ensureOwner, sessionUser } = require("./cabinet");
 const { cabinetRouter } = require("./cabinetApi");
 
 const PORT = process.env.PORT || 8000;
@@ -258,6 +258,23 @@ async function saveData(data) {
 
 async function requireAdmin(req, res, next) {
   const auth = req.headers.authorization || "";
+
+  // Preferred: a cabinet session belonging to an admin or owner. That way the
+  // catalogue is edited by a named person whose actions are attributable, and
+  // no shared password has to exist anywhere.
+  if (auth.startsWith("Bearer ")) {
+    const user = await sessionUser(pool, auth);
+    if (user && !user.disabled && (user.role === "admin" || user.role === "owner")) {
+      req.user = user;
+      return next();
+    }
+    return res.status(401).json({ detail: "Not authenticated" });
+  }
+
+  // Legacy: the single shared ADMIN_USERNAME/ADMIN_PASSWORD. Kept so a running
+  // deployment does not lock itself out mid-rollout, and so the panel still
+  // works before any admin account exists. Once every admin has a cabinet
+  // account, delete both variables and this path stops being reachable.
   if (!auth.startsWith("Basic ")) {
     return res.status(401).json({ detail: "Not authenticated" });
   }

@@ -220,6 +220,30 @@ async function ensureCabinetSchema(pool) {
   `);
 }
 
+// Resolves a bearer token to the person holding it, or null. Lives here rather
+// than inside the cabinet routes because server.js needs it too: the older
+// /admin panel now accepts a cabinet session instead of a shared password, so
+// both entry points have to read a session the same way.
+async function sessionUser(pool, authHeader) {
+  if (!pool || !authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const tokenHash = hashToken(authHeader.slice(7).trim());
+  const { rows } = await pool.query(
+    `SELECT u.id, u.email, u.role, u.full_name, u.is_active, s.expires_at
+       FROM auth_sessions s JOIN users u ON u.id = s.user_id
+      WHERE s.token_hash = $1`,
+    [tokenHash]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    // Tidy the dead row away while we are here; a caller only sees "no session".
+    pool.query("DELETE FROM auth_sessions WHERE token_hash = $1", [tokenHash]).catch(() => {});
+    return null;
+  }
+  if (!row.is_active) return { disabled: true };
+  return { id: row.id, email: row.email, role: row.role, full_name: row.full_name };
+}
+
 // The four tables the earlier scaffolding created declared their foreign keys
 // without any ON DELETE behaviour, and CREATE TABLE IF NOT EXISTS will not
 // change an existing table. On such a database removing a person fails — the
@@ -290,6 +314,7 @@ async function ensureOwner(pool) {
 module.exports = {
   ensureCabinetSchema,
   ensureOwner,
+  sessionUser,
   ROLES,
   STAFF,
   CONTRACT_MONTHS,

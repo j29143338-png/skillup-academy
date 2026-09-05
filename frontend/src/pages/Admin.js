@@ -7,14 +7,18 @@ const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const isLocal = BASE.includes('localhost');
 const r = (path) => `${BASE}${isLocal ? '/api' : ''}${path}`;
 
-// Send credentials as Basic Auth header on EVERY admin request
-// This works regardless of serverless cold starts — no session state needed
+// Send the session token on EVERY admin request. This works regardless of
+// serverless cold starts — the server keeps no per-request state.
 async function apiCall(path, method = 'GET', body = null, creds = null) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (creds) {
-      const encoded = btoa(`${creds.username}:${creds.password}`);
-      headers['Authorization'] = `Basic ${encoded}`;
+      // The panel signs in with a cabinet account now, so the catalogue is
+      // edited by a named person instead of from behind a shared password.
+      // The Basic branch only serves a session stored before that change.
+      headers['Authorization'] = creds.token
+        ? `Bearer ${creds.token}`
+        : `Basic ${btoa(`${creds.username}:${creds.password}`)}`;
     }
     const res = await fetch(r(path), {
       method,
@@ -31,21 +35,25 @@ async function apiCall(path, method = 'GET', body = null, creds = null) {
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin, t }) {
-  const [creds, setCreds] = useState({ username: '', password: '' });
+  const [creds, setCreds] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
-    const { ok, data } = await apiCall('/admin/login', 'POST', creds);
-    if (ok) {
-      // Store plaintext credentials in sessionStorage
-      // They are sent as Basic Auth on every subsequent request
-      sessionStorage.setItem('admin_creds', JSON.stringify(creds));
-      onLogin(creds);
-    } else {
+    const { ok, data } = await apiCall('/auth/login', 'POST', creds);
+    if (!ok) {
       setError(data.detail || t('login_error'));
+    } else if (data.user.role !== 'admin' && data.user.role !== 'owner') {
+      // A real account, but not one that may edit the public catalogue. Say so
+      // rather than letting every request fail with an unexplained 401.
+      setError(t('cab_no_access'));
+    } else {
+      // Only the token is kept, never the password.
+      const session = { token: data.token, user: data.user };
+      sessionStorage.setItem('admin_creds', JSON.stringify(session));
+      onLogin(session);
     }
     setLoading(false);
   };
@@ -64,8 +72,8 @@ function LoginPage({ onLogin, t }) {
         <p>{t('login_subtitle')}</p>
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
-            <label>{t('username')}</label>
-            <input type="text" value={creds.username} onChange={e => setCreds({ ...creds, username: e.target.value })} autoComplete="username" />
+            <label>{t('login_email')}</label>
+            <input type="email" value={creds.email} onChange={e => setCreds({ ...creds, email: e.target.value })} autoComplete="username" />
           </div>
           <div className="form-group">
             <label>{t('password')}</label>
@@ -224,7 +232,17 @@ export default function Admin() {
   const [saveStatus, setSaveStatus] = useState('');
 
   const handleLogin  = (c) => setCreds(c);
-  const handleLogout = () => { sessionStorage.removeItem('admin_creds'); setCreds(null); };
+  // Reads the stored session rather than the `creds` state so it captures
+  // nothing: loadAll calls it on a 401, and a changing dependency there would
+  // re-run every fetch on each render.
+  const handleLogout = useCallback(() => {
+    let stored = null;
+    try { stored = JSON.parse(sessionStorage.getItem('admin_creds') || 'null'); } catch { /* ignore */ }
+    // End the session server-side too, so the token cannot be replayed.
+    if (stored?.token) apiCall('/auth/logout', 'POST', null, stored);
+    sessionStorage.removeItem('admin_creds');
+    setCreds(null);
+  }, []);
 
   const loadAll = useCallback(async () => {
     if (!creds) return;
@@ -249,7 +267,7 @@ export default function Admin() {
     });
     if (!appsRes.ok) setLoadError(`Error (${appsRes.status}): ${appsRes.data?.detail || 'Could not load data'}`);
     setLoading(false);
-  }, [creds]);
+  }, [creds, handleLogout]);
 
   useEffect(() => { if (creds) loadAll(); }, [creds, loadAll]);
 

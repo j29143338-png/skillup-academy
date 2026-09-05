@@ -144,3 +144,11 @@
 .cab-row:last-of-type { border-bottom: none; }
 .cab-row h3 { margin-bottom: 0; }
 .cab-row button { padding: 6px 12px; font-size: 13px; }
+
+/* The one-time password readout: monospace so a handwritten copy of it cannot
+   confuse l with 1, and inline so it sits in the sentence. */
+.cab-inline {
+  display: inline-block; padding: 3px 8px; margin-left: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px; letter-spacing: 0.04em; user-select: all;
+}

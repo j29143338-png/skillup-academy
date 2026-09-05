@@ -45,6 +45,54 @@ const asDate = (value) => (value ? String(value).slice(0, 10) : '—');
 const money = (amount, currency) =>
   `${Number(amount).toLocaleString('ru-RU')} ${currency || 'UZS'}`;
 
+// A password field the office can read while typing it, generate a decent one
+// into, and copy out. Passwords are stored one-way, so the only moment anyone
+// can see one is here — which is exactly why this exists.
+function PasswordField({ label, value, onChange }) {
+  const { t } = useLang();
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Ambiguous characters are left out: these get read aloud and written down.
+  const generate = () => {
+    const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint32Array(12);
+    crypto.getRandomValues(bytes);
+    onChange(Array.from(bytes, (n) => alphabet[n % alphabet.length]).join(''));
+    setShown(true);
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be refused; the value is on screen either way.
+      setShown(true);
+    }
+  };
+
+  return (
+    <>
+      <label className="cab-wide">
+        {label}
+        <input type={shown ? 'text' : 'password'} minLength={8} autoComplete="new-password"
+               value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
+      <div className="cab-btn-row">
+        <button type="button" className="cab-btn-ghost" onClick={() => setShown(!shown)}>
+          {shown ? t('cab_hide') : t('cab_show')}
+        </button>
+        <button type="button" className="cab-btn-ghost" onClick={generate}>{t('cab_generate')}</button>
+        <button type="button" className="cab-btn-ghost" disabled={!value} onClick={copy}>
+          {copied ? t('cab_copied') : t('cab_copy')}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function Stat({ label, value, hint }) {
   return (
     <div className="cab-stat">
@@ -533,11 +581,16 @@ function StaffCabinet({ tab }) {
     } catch (err) { setError(err.message); }
   };
 
+  // What was just handed out, kept in memory only so the office can read it
+  // back to the person. It is never sent anywhere and disappears on reload.
+  const [justCreated, setJustCreated] = useState(null);
+
   const addUser = async (e) => {
     e.preventDefault();
     setError('');
     try {
       await api.createStaffUser(form);
+      setJustCreated({ email: form.email, name: form.full_name, password: form.password });
       setForm({ email: '', full_name: '', role: 'student', password: '' });
       users.reload();
     } catch (err) { setError(err.message); }
@@ -556,14 +609,12 @@ function StaffCabinet({ tab }) {
       <Panel state={users}>
         {error && <p className="cab-error">{error}</p>}
         {pwDone && <p className="cab-note">{pwDone}</p>}
+        <p className="cab-muted">{t('cab_password_note')}</p>
 
         {pwFor && (
           <div className="cab-form cab-form-row cab-card">
-            <label className="cab-wide">
-              {t('cab_set_password')} — {pwFor.full_name || pwFor.email}
-              <input type="password" minLength={8} autoComplete="new-password"
-                     value={newPw} onChange={(e) => setNewPw(e.target.value)} />
-            </label>
+            <PasswordField label={`${t('cab_set_password')} — ${pwFor.full_name || pwFor.email}`}
+                           value={newPw} onChange={setNewPw} />
             <button type="button" disabled={newPw.length < 8} onClick={savePassword}>{t('cab_save')}</button>
             <button type="button" className="cab-btn-ghost" onClick={() => setPwFor(null)}>{t('cab_delete')}</button>
           </div>
@@ -591,13 +642,26 @@ function StaffCabinet({ tab }) {
               {user.role === 'owner' && <option value="owner">owner</option>}
             </select>
           </label>
-          <label>
-            {t('login_password')}
-            <input type="password" minLength={8} required value={form.password}
-                   onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          </label>
-          <button type="submit">{t('cab_add')}</button>
+          <PasswordField label={t('login_password')} value={form.password}
+                         onChange={(v) => setForm({ ...form, password: v })} />
+          <button type="submit" disabled={form.password.length < 8}>{t('cab_add')}</button>
         </form>
+
+        {justCreated && (
+          <div className="cab-card">
+            <p className="cab-note">{t('cab_new_account')}</p>
+            <div className="cab-row">
+              <span>
+                <strong>{t('cab_account_for')}:</strong> {justCreated.name || justCreated.email}
+                {' · '}{justCreated.email}
+                {' · '}<code className="cab-answer cab-inline">{justCreated.password}</code>
+              </span>
+              <button type="button" className="cab-btn-ghost" onClick={() => setJustCreated(null)}>
+                {t('cab_hide')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <table className="cab-table">
           <thead>
