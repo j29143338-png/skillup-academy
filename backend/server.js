@@ -34,11 +34,17 @@ const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || "";
 const ADMIN_PASSWORD_PLAINTEXT = process.env.ADMIN_PASSWORD || "";
 const DATABASE_URL = process.env.DATABASE_URL || "";
 
-if (!ADMIN_PASSWORD_HASH) {
+// The catalogue panel signs in with a cabinet account now, so neither of these
+// needs to exist. Warn only when the legacy path is actually in use, and warn
+// hardest about the case that is genuinely wrong: a plaintext password living
+// in the deployment's environment.
+if (ADMIN_PASSWORD_PLAINTEXT && !ADMIN_PASSWORD_HASH) {
   console.warn(
-    "⚠️  ADMIN_PASSWORD_HASH not set — falling back to plaintext ADMIN_PASSWORD comparison (dev only). " +
-    "Set ADMIN_PASSWORD_HASH in production, see README."
+    "⚠️  ADMIN_PASSWORD is set in plaintext. The /admin panel accepts an admin or owner " +
+    "cabinet account, so delete ADMIN_PASSWORD and ADMIN_USERNAME instead of hashing them."
   );
+} else if (!ADMIN_PASSWORD_PLAINTEXT && !ADMIN_PASSWORD_HASH) {
+  console.log("Catalogue panel: cabinet accounts only, no shared password configured.");
 }
 
 async function checkAdminCredentials(user, pass) {
