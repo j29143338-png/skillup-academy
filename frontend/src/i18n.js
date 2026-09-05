@@ -404,6 +404,13 @@ export const translations = {
     cab_hw_set: "set",
     cab_journal_no_student: "No student to show yet.",
     cab_author: "by",
+
+    // Website teachers
+    cab_site_teachers: "Teachers on the website",
+    cab_site_teachers_hint: "These are the profiles visitors see. A profile is not an account — link one to a cabinet user so the face on the site is the person who marks attendance.",
+    cab_no_account: "no cabinet account",
+    cab_linked_to: "linked to",
+    cab_link: "Link",
   },
 
   ru: {
@@ -794,6 +801,13 @@ export const translations = {
     cab_hw_set: "задано",
     cab_journal_no_student: "Пока некого показать.",
     cab_author: "автор",
+
+    // Преподаватели сайта
+    cab_site_teachers: "Преподаватели на сайте",
+    cab_site_teachers_hint: "Это карточки, которые видят посетители. Карточка — не аккаунт: свяжите её с пользователем кабинета, чтобы человек с сайта и тот, кто отмечает посещаемость, были одним лицом.",
+    cab_no_account: "нет аккаунта в кабинете",
+    cab_linked_to: "связан с",
+    cab_link: "Связать",
   },
 
   uz: {
@@ -1182,6 +1196,13 @@ export const translations = {
     cab_hw_set: "berilgan",
     cab_journal_no_student: "Hozircha ko‘rsatadigan o‘quvchi yo‘q.",
     cab_author: "muallif",
+
+    // Sayt o‘qituvchilari
+    cab_site_teachers: "Saytdagi o‘qituvchilar",
+    cab_site_teachers_hint: "Bular tashrifchilar ko‘radigan kartochkalar. Kartochka — hisob emas: uni kabinet foydalanuvchisi bilan bog‘lang.",
+    cab_no_account: "kabinetda hisob yo‘q",
+    cab_linked_to: "bog‘langan",
+    cab_link: "Bog‘lash",
   }
 };
 

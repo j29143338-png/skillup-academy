@@ -696,6 +696,12 @@ function StaffCabinet({ tab }) {
           </div>
         )}
 
+        {/* Sits under the account list because that is where the answer to
+            "does this person have a login" belongs. */}
+        <SiteTeachers
+          onNeedAccount={(name) => setForm({ email: '', full_name: name, role: 'teacher', password: '' })}
+        />
+
         <table className="cab-table">
           <thead>
             <tr><th>{t('cab_name')}</th><th>{t('cab_email')}</th><th>{t('cab_role')}</th><th>{t('cab_status')}</th></tr>
@@ -1249,6 +1255,77 @@ function TeacherJournal() {
       {picked ? <Journal studentId={picked} canWrite />
               : <p className="cab-muted">{t('cab_journal_no_student')}</p>}
     </>
+  );
+}
+
+// ── Office: the teachers the website already shows ──────────────────────────
+// The site has had teacher profiles all along — photo, subject, biography —
+// and they are catalogue entries, not accounts. Nobody could see from the
+// cabinet which of the faces on the website can actually sign in and mark a
+// register. This lists them side by side and links the two.
+function SiteTeachers({ onNeedAccount }) {
+  const { t } = useLang();
+  const profiles = useAsync(() => api.getTeachers(), []);
+  // Fetched here rather than taken from the People list, which is filtered to
+  // whoever is still here — a profile linked to a departed teacher would
+  // otherwise read as "no account".
+  const accountList = useAsync(() => api.getStaffUsers('teacher'), []);
+  const accounts = accountList.data;
+  const [linking, setLinking] = useState({});
+  const [error, setError] = useState('');
+
+  const link = async (profile, userId) => {
+    setError('');
+    try {
+      await api.updateCatalogueTeacher(profile.id, { user_id: Number(userId) });
+      setLinking({ ...linking, [profile.id]: '' });
+      profiles.reload();
+    } catch (e) { setError(e.message); }
+  };
+
+  const accountFor = (profile) => (accounts || []).find((u) => u.id === profile.user_id);
+
+  return (
+    <div className="cab-card">
+      <h3>{t('cab_site_teachers')}</h3>
+      <p className="cab-muted">{t('cab_site_teachers_hint')}</p>
+      {error && <p className="cab-error">{error}</p>}
+      <Panel state={profiles} empty={!(profiles.data || []).length}>
+        {(profiles.data || []).map((p) => {
+          const account = accountFor(p);
+          return (
+            <div className="cab-row" key={p.id}>
+              <span>
+                <strong>{p.name}</strong>
+                {p.subject && <span className="cab-muted"> · {p.subject}</span>}
+                {' · '}
+                {account
+                  ? <span className="cab-ok">{t('cab_linked_to')} {account.email}</span>
+                  : <span className="cab-warn">{t('cab_no_account')}</span>}
+              </span>
+              {!account && (
+                <div className="cab-btn-row">
+                  <select value={linking[p.id] || ''}
+                          onChange={(e) => setLinking({ ...linking, [p.id]: e.target.value })}>
+                    <option value="">—</option>
+                    {(accounts || []).filter((u) => u.role === 'teacher').map((u) => (
+                      <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
+                    ))}
+                  </select>
+                  <button type="button" className="cab-btn-ghost" disabled={!linking[p.id]}
+                          onClick={() => link(p, linking[p.id])}>
+                    {t('cab_link')}
+                  </button>
+                  <button type="button" className="cab-btn-ghost" onClick={() => onNeedAccount(p.name)}>
+                    {t('cab_add')}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Panel>
+    </div>
   );
 }
 

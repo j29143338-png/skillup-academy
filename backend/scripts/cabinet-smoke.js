@@ -464,6 +464,43 @@ async function main() {
       (await call("/admin/applications", { token: teacherToken })).status === 401
     );
 
+    console.log("\nWebsite teacher profiles");
+    // The profiles the site shows are catalogue entries, not accounts. Linking
+    // one to a cabinet user is what ties the face on the website to the person
+    // who marks a register.
+    const profiles = (await call("/teachers")).body;
+    check("the office can read the profiles the site shows", Array.isArray(profiles) && profiles.length > 0);
+    if (profiles.length) {
+      const first = profiles[0];
+      const linked = await call(`/admin/teachers/${first.id}`, {
+        method: "PUT",
+        token: adminToken,
+        body: { user_id: teacher.id },
+      });
+      check("a profile can be linked to a teacher's account", linked.body.user_id === teacher.id);
+      check("linking leaves the rest of the profile alone", linked.body.name === first.name);
+      check(
+        "a teacher cannot rewrite the public profiles",
+        (await call(`/admin/teachers/${first.id}`, {
+          method: "PUT",
+          token: teacherToken,
+          body: { name: "Hacked" },
+        })).status === 401
+      );
+      // Put it back; this is the live catalogue. The endpoint merges rather
+      // than replaces, so the link has to be cleared explicitly — sending the
+      // original object would leave user_id sitting there.
+      await call(`/admin/teachers/${first.id}`, {
+        method: "PUT",
+        token: adminToken,
+        body: { ...first, user_id: null },
+      });
+      const restored = (await call("/teachers")).body.find((p) => p.id === first.id);
+      check("and the profile is restored afterwards",
+        restored.name === first.name && !restored.user_id,
+        JSON.stringify({ user_id: restored.user_id }));
+    }
+
     console.log("\nCatalogue panel");
     // The older /admin panel now accepts a cabinet session, which is what lets
     // the shared ADMIN_PASSWORD be deleted entirely.

@@ -219,3 +219,9 @@ export const getJournal   = (studentId) =>
   authGet(studentId ? `/cabinet/journal?student_id=${studentId}` : '/cabinet/journal');
 export const addNote      = (student_id, text) => authPost('/cabinet/journal/notes', { student_id, text });
 export const deleteNote   = (id) => authDelete(`/cabinet/journal/notes/${id}`);
+
+// The public teacher profiles that the site shows. They are catalogue entries,
+// not accounts — linking one to a cabinet user is what connects the face on
+// the website to the person who marks attendance.
+export const updateCatalogueTeacher = (id, data) =>
+  authRequest(`/admin/teachers/${id}`, { method: 'PUT', body: data });
