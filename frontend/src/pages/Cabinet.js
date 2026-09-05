@@ -722,6 +722,7 @@ function StaffCabinet({ tab }) {
     );
   }
 
+  if (tab === 'applications') return <StaffApplications />;
   if (tab === 'students') return <StaffStudents />;
   if (tab === 'groups') return <StaffGroups />;
 
@@ -1087,6 +1088,142 @@ function StaffStudents() {
   );
 }
 
+// ── Office: applications ────────────────────────────────────────────────────
+// The front desk's starting point. An application arrives, somebody rings the
+// person, and the outcome is recorded here — including the one outcome that
+// matters, which is turning them into a student without retyping their name.
+const APP_STATUSES = ['new', 'contacted', 'enrolled', 'declined'];
+
+function StaffApplications() {
+  const { t } = useLang();
+  const applications = useAsync(() => api.getApplications(), []);
+  const [filter, setFilter] = useState('new');
+  const [enrolling, setEnrolling] = useState(null);
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);
+
+  const setStatus = async (application, status) => {
+    setError('');
+    try {
+      await api.setApplicationStatus(application.id, status);
+      applications.reload();
+    } catch (e) { setError(e.message); }
+  };
+
+  // Creating the account and closing the application are one action, because
+  // doing the first and forgetting the second is how a list stops being useful.
+  const enrol = async () => {
+    setError('');
+    try {
+      await api.createStaffUser({
+        email: form.email,
+        password: form.password,
+        role: 'student',
+        full_name: enrolling.name,
+      });
+      await api.setApplicationStatus(enrolling.id, 'enrolled');
+      setDone({ name: enrolling.name, email: form.email, password: form.password });
+      setEnrolling(null);
+      setForm({ email: '', password: '' });
+      applications.reload();
+    } catch (e) { setError(e.message); }
+  };
+
+  const rows = (applications.data || [])
+    .filter((a) => (filter ? (a.status || 'new') === filter : true))
+    .slice()
+    .reverse();
+
+  return (
+    <Panel state={applications}>
+      {error && <p className="cab-error">{error}</p>}
+      <p className="cab-note">{t('cab_app_hint')}</p>
+
+      {done && (
+        <div className="cab-card">
+          <p className="cab-note">{t('cab_app_created')}</p>
+          <div className="cab-row">
+            <span>
+              <strong>{done.name}</strong> · {done.email} ·
+              <code className="cab-answer cab-inline">{done.password}</code>
+            </span>
+            <button type="button" className="cab-btn-ghost" onClick={() => setDone(null)}>{t('cab_hide')}</button>
+          </div>
+        </div>
+      )}
+
+      <nav className="cab-tabs">
+        {APP_STATUSES.map((s) => (
+          <button key={s} type="button" className={`cab-tab${filter === s ? ' active' : ''}`}
+                  onClick={() => setFilter(s)}>
+            {t(`cab_app_${s}`)}
+          </button>
+        ))}
+        <button type="button" className={`cab-tab${filter === '' ? ' active' : ''}`}
+                onClick={() => setFilter('')}>{t('cab_filter_all')}</button>
+      </nav>
+
+      {rows.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+
+      {rows.map((a) => (
+        <div className="cab-card" key={a.id}>
+          <h3>{a.name} <span className="cab-muted">{asDate(a.date)}</span></h3>
+          <p>
+            <strong>{t('cab_app_phone')}:</strong> {a.phone}
+            {a.telegram ? ` · ${a.telegram}` : ''}
+            {a.age ? ` · ${a.age}` : ''}
+          </p>
+          {a.course && <p><strong>{t('cab_app_course')}:</strong> {a.course} {a.format ? `· ${a.format}` : ''}</p>}
+          {(a.days || a.time) && <p><strong>{t('cab_app_when')}:</strong> {[a.days, a.time].filter(Boolean).join(' · ')}</p>}
+          {a.purpose && <p><strong>{t('cab_app_wants')}:</strong> {a.purpose}</p>}
+          {a.message && <p className="cab-answer">{a.message}</p>}
+          {a.handled_by && (
+            <p className="cab-muted">{t('cab_app_handled_by')}: {a.handled_by} · {asDate(a.handled_at)}</p>
+          )}
+
+          <div className="cab-btn-row">
+            {APP_STATUSES.filter((s) => s !== 'enrolled').map((s) => (
+              <button key={s} type="button"
+                      className={(a.status || 'new') === s ? '' : 'cab-btn-ghost'}
+                      onClick={() => setStatus(a, s)}>
+                {t(`cab_app_${s}`)}
+              </button>
+            ))}
+            {(a.status || 'new') !== 'enrolled' && (
+              <button type="button" onClick={() => { setEnrolling(a); setForm({ email: '', password: '' }); }}>
+                {t('cab_app_enrol')}
+              </button>
+            )}
+          </div>
+
+          {enrolling?.id === a.id && (
+            <div className="cab-form cab-form-row cab-sub">
+              <label>
+                {t('cab_name')}
+                <input type="text" value={a.name} readOnly />
+              </label>
+              <label>
+                {t('cab_email')}
+                <input type="email" value={form.email}
+                       onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </label>
+              <PasswordField label={t('login_password')} value={form.password}
+                             onChange={(v) => setForm({ ...form, password: v })} />
+              <button type="button" disabled={!form.email || form.password.length < 8} onClick={enrol}>
+                {t('cab_app_enrol')}
+              </button>
+              <button type="button" className="cab-btn-ghost" onClick={() => setEnrolling(null)}>
+                {t('cab_delete')}
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </Panel>
+  );
+}
+
 // ── Office: groups and teacher pay ──────────────────────────────────────────
 function StaffGroups() {
   const { t, lang } = useLang();
@@ -1253,8 +1390,8 @@ const TABS = {
   student: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
   parent: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
   teacher: ['schedule', 'groups', 'students', 'homework', 'finance', 'password'],
-  admin: ['people', 'students', 'groups', 'log', 'password'],
-  owner: ['people', 'students', 'groups', 'log', 'analytics', 'password'],
+  admin: ['applications', 'students', 'groups', 'people', 'log', 'password'],
+  owner: ['applications', 'students', 'groups', 'people', 'log', 'analytics', 'password'],
 };
 
 export default function Cabinet() {

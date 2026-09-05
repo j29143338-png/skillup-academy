@@ -23,7 +23,7 @@ process.env.OWNER_EMAIL = `owner${SUFFIX}`;
 process.env.OWNER_PASSWORD = PASSWORD;
 process.env.OWNER_NAME = "Smoke Owner";
 
-const { app } = require("../server");
+const { app, loadData, saveData } = require("../server");
 const { ensureCabinetSchema, ensureOwner } = require("../cabinet");
 
 let passed = 0;
@@ -389,6 +389,37 @@ async function main() {
       withCounts.find((p) => p.id === parent.id)?.active_children === 0
     );
 
+    console.log("\nApplications");
+    // The front desk's starting point. It lives with the public catalogue
+    // rather than in the cabinet tables, but the same session opens it.
+    await call("/apply", {
+      method: "POST",
+      body: { name: `Smoke Applicant${SUFFIX}`, phone: "+998000000000", course: "IELTS" },
+    });
+    const applications = (await call("/admin/applications", { token: adminToken })).body;
+    const mine = applications.find((a) => a.name === `Smoke Applicant${SUFFIX}`);
+    check("a new application arrives with status 'new'", mine && mine.status === "new");
+    const moved = await call(`/admin/applications/${mine.id}`, {
+      method: "PATCH",
+      token: adminToken,
+      body: { status: "contacted" },
+    });
+    check("the office can mark it called", moved.body.status === "contacted");
+    check("and the record says which admin did it", moved.body.handled_by === `admin-a${SUFFIX}`,
+      moved.body.handled_by);
+    check(
+      "an invented status is refused",
+      (await call(`/admin/applications/${mine.id}`, {
+        method: "PATCH",
+        token: adminToken,
+        body: { status: "whatever" },
+      })).status === 400
+    );
+    check(
+      "a teacher cannot touch applications",
+      (await call("/admin/applications", { token: teacherToken })).status === 401
+    );
+
     console.log("\nCatalogue panel");
     // The older /admin panel now accepts a cabinet session, which is what lets
     // the shared ADMIN_PASSWORD be deleted entirely.
@@ -428,6 +459,16 @@ async function main() {
     const { rowCount } = await pool.query("DELETE FROM users WHERE email LIKE $1", [`%${SUFFIX}`]);
     await pool.query("DELETE FROM groups WHERE name LIKE $1", [`%${SUFFIX}`]);
     console.log(`  removed ${rowCount} smoke accounts`);
+
+    // The application went into the catalogue blob, not a table of its own, so
+    // it has to be taken back out the same way.
+    const data = await loadData();
+    const before = data.applications.length;
+    data.applications = data.applications.filter((a) => !String(a.name).endsWith(SUFFIX));
+    if (data.applications.length !== before) {
+      await saveData(data);
+      console.log(`  removed ${before - data.applications.length} smoke application(s)`);
+    }
     server.close();
     await pool.end();
   }

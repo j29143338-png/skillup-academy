@@ -188,6 +188,12 @@ export const addGroupMember  = (groupId, student_id) => authPost(`/cabinet/staff
 export const scheduleGroup   = (groupId, data) => authPost(`/cabinet/staff/groups/${groupId}/schedule`, data);
 export const linkParent      = (data) => authPost('/cabinet/staff/parent-links', data);
 export const setTeacherRate  = (data) => authPost('/cabinet/staff/teacher-rate', data);
+// Applications live with the public catalogue rather than in the cabinet
+// tables, so they sit behind /admin — which now accepts the same session.
+export const getApplications = () => authGet('/admin/applications');
+export const setApplicationStatus = (id, status, note) =>
+  authRequest(`/admin/applications/${id}`, { method: 'PATCH', body: { status, note } });
+
 export const getActionLog    = () => authGet('/cabinet/staff/log');
 export const getAnalytics    = () => authGet('/cabinet/staff/analytics');
 

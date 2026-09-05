@@ -41,7 +41,7 @@ it made.
 | `student`    | Enrolled learner                      | Sees own schedule, homework, progress, Academic Support, payments |
 | `parent`     | Student's parent/guardian             | Same visibility as their child, read-mostly |
 | `teacher`    | Instructor                            | Sees own schedule, own groups/students, attendance, homework, comments, Academic Support, own financial info (net of tax withholding, once that system exists) |
-| `admin`      | Front-desk administrator (×2, shifts) | Same duties as each other; system must log which admin performed which action (`action_log.user_id`) |
+| `admin`      | Front-desk administrator (×2, shifts) | Runs the whole day-to-day operation: applications, enrolment, schedule, payments, groups, corrections. Only three things are held back — creating or changing `admin`/`owner` accounts, and the analytics view. The log records which admin did what (`action_log.user_id`) |
 | `owner`      | Business owner                        | Sees everything: students, applications, teachers, admins, schedule, payments, contracts, analytics |
 
 Each user logs in with **their own** email/login + password. No shared logins.
@@ -114,10 +114,11 @@ Everything the academy does day to day is a screen, not a code change:
 
 | Task | Where |
 |------|-------|
+| Read a new application, record that it was called, turn the applicant into a student | Cabinet → Applications |
 | Add a student, parent, teacher or admin; disable an account; set someone's password | Cabinet → People |
 | Enrol: contract, lesson package, schedule, payments; fix a wrongly marked lesson; link a parent | Cabinet → Students, pick a person |
 | Groups, who teaches them, who is in them; teacher pay rates | Cabinet → Groups |
-| Courses, prices, teachers on the public site, reviews, applications | the older `/admin` panel |
+| Courses, prices, teachers on the public site, reviews | the older `/admin` panel, signed into with the same account |
 | Who did what, and when | Cabinet → Activity log |
 
 Code is only needed for a new *kind* of thing — another role, another field on a

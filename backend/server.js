@@ -406,6 +406,32 @@ router.get("/admin/applications", requireAdmin, async (req, res) => {
   res.json(data.applications);
 });
 
+// An application arrives, someone rings the person, and then what? Without a
+// status the list only ever grows and nobody can tell which ones are dealt
+// with. These are the four states the front desk actually works in.
+const APPLICATION_STATUSES = ["new", "contacted", "enrolled", "declined"];
+
+router.patch("/admin/applications/:id", requireAdmin, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!APPLICATION_STATUSES.includes(status)) {
+    return res.status(400).json({ detail: `status must be one of: ${APPLICATION_STATUSES.join(", ")}` });
+  }
+  const id = parseInt(req.params.id, 10);
+  const data = await loadData();
+  const application = data.applications.find((a) => a.id === id);
+  if (!application) return res.status(404).json({ detail: "Not found" });
+
+  application.status = status;
+  application.note = clean(req.body?.note, 500) || application.note || "";
+  // Who moved it and when: the same accountability the cabinet gives every
+  // other action, now that a named person is signed in rather than a shared
+  // password. req.user is absent only on the legacy Basic auth path.
+  application.handled_by = req.user ? req.user.email : "admin";
+  application.handled_at = new Date().toISOString();
+  await saveData(data);
+  res.json(application);
+});
+
 router.get("/admin/feedbacks", requireAdmin, async (req, res) => {
   const data = await loadData();
   res.json(data.feedbacks);

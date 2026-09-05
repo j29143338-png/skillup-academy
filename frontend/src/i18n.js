@@ -375,6 +375,22 @@ export const translations = {
     cab_leaving_note: "Turning an account off is how someone leaves: they can no longer sign in and they drop off the teachers' lists, while payments, attendance and contracts stay on the record. Nothing is ever deleted, so a returning student picks up where they left off.",
     cab_parent_orphan_note: "Parents with no children here any more are worth turning off too.",
     cab_schedule_group: "Add for the whole group",
+
+    // Applications
+    cab_tab_applications: "Applications",
+    cab_app_new: "New",
+    cab_app_contacted: "Called",
+    cab_app_enrolled: "Enrolled",
+    cab_app_declined: "Declined",
+    cab_app_phone: "Phone",
+    cab_app_course: "Course",
+    cab_app_wants: "Wants",
+    cab_app_when: "Preferred days and time",
+    cab_app_enrol: "Enrol this person",
+    cab_app_handled_by: "handled by",
+    cab_app_note: "How it went",
+    cab_app_hint: "An application becomes a student here: enrolling creates the account and marks the application done. Everything after that is on the Students tab.",
+    cab_app_created: "Student created and the application marked enrolled.",
   },
 
   ru: {
@@ -736,6 +752,22 @@ export const translations = {
     cab_leaving_note: "Уход оформляется отключением аккаунта: человек больше не может войти и пропадает из списков преподавателей, а оплаты, посещаемость и договоры остаются в отчётности. Ничего не удаляется — если ученик вернётся, всё на месте.",
     cab_parent_orphan_note: "Родителей, у которых больше никто не занимается, тоже стоит отключить.",
     cab_schedule_group: "Поставить всей группе",
+
+    // Заявки
+    cab_tab_applications: "Заявки",
+    cab_app_new: "Новая",
+    cab_app_contacted: "Позвонили",
+    cab_app_enrolled: "Зачислен",
+    cab_app_declined: "Отказ",
+    cab_app_phone: "Телефон",
+    cab_app_course: "Курс",
+    cab_app_wants: "Цель",
+    cab_app_when: "Удобные дни и время",
+    cab_app_enrol: "Завести ученика",
+    cab_app_handled_by: "обработал",
+    cab_app_note: "Как прошло",
+    cab_app_hint: "Заявка превращается в ученика прямо здесь: кнопка создаёт аккаунт и помечает заявку зачисленной. Всё дальнейшее — во вкладке «Ученики».",
+    cab_app_created: "Ученик создан, заявка помечена зачисленной.",
   },
 
   uz: {
@@ -1095,6 +1127,22 @@ export const translations = {
     cab_leaving_note: "Ketish hisobni o‘chirish orqali rasmiylashtiriladi: odam kira olmaydi va o‘qituvchilar ro‘yxatidan chiqadi, to‘lovlar, davomat va shartnomalar esa hisobotda qoladi. Hech narsa o‘chirilmaydi — o‘quvchi qaytsa, hammasi joyida.",
     cab_parent_orphan_note: "Farzandi endi o‘qimaydigan ota-onalarni ham o‘chirib qo‘ygan ma‘qul.",
     cab_schedule_group: "Butun guruhga qo‘yish",
+
+    // Arizalar
+    cab_tab_applications: "Arizalar",
+    cab_app_new: "Yangi",
+    cab_app_contacted: "Qo‘ng‘iroq qilindi",
+    cab_app_enrolled: "Qabul qilindi",
+    cab_app_declined: "Rad etildi",
+    cab_app_phone: "Telefon",
+    cab_app_course: "Kurs",
+    cab_app_wants: "Maqsad",
+    cab_app_when: "Qulay kun va vaqt",
+    cab_app_enrol: "O‘quvchi yaratish",
+    cab_app_handled_by: "kim ko‘rdi",
+    cab_app_note: "Qanday o‘tdi",
+    cab_app_hint: "Ariza shu yerda o‘quvchiga aylanadi: tugma hisob yaratadi va arizani qabul qilingan deb belgilaydi. Qolgani — «O‘quvchilar» bo‘limida.",
+    cab_app_created: "O‘quvchi yaratildi, ariza qabul qilingan deb belgilandi.",
   }
 };
 
