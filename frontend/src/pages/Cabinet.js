@@ -556,7 +556,10 @@ function GradeRow({ homeworkId, submission, onDone }) {
 function StaffCabinet({ tab }) {
   const { t } = useLang();
   const { user } = useAuth();
-  const users = useAsync(() => api.getStaffUsers(), []);
+  // '' = everyone, '1' = still here, '0' = gone. Kept in the query rather than
+  // filtered on the client so the list stays short as the years pass.
+  const [filter, setFilter] = useState('1');
+  const users = useAsync(() => api.getStaffUsers(undefined, filter), [filter]);
   const log = useAsync(() => api.getActionLog(), []);
   const analytics = useAsync(() => (user.role === 'owner' ? api.getAnalytics() : Promise.resolve(null)), [user.role]);
 
@@ -610,6 +613,17 @@ function StaffCabinet({ tab }) {
         {error && <p className="cab-error">{error}</p>}
         {pwDone && <p className="cab-note">{pwDone}</p>}
         <p className="cab-muted">{t('cab_password_note')}</p>
+        <p className="cab-note">{t('cab_leaving_note')}</p>
+
+        <nav className="cab-tabs">
+          {[['1', 'cab_filter_active'], ['0', 'cab_filter_left'], ['', 'cab_filter_all']].map(([value, key]) => (
+            <button key={key} type="button"
+                    className={`cab-tab${filter === value ? ' active' : ''}`}
+                    onClick={() => setFilter(value)}>
+              {t(key)}
+            </button>
+          ))}
+        </nav>
 
         {pwFor && (
           <div className="cab-form cab-form-row cab-card">
@@ -670,9 +684,24 @@ function StaffCabinet({ tab }) {
           <tbody>
             {rows.map((u) => (
               <tr key={u.id}>
-                <td>{u.full_name || '—'}</td>
+                <td>
+                  {u.full_name || '—'}
+                  {!u.is_active && <span className="cab-muted"> · {t('cab_left')}</span>}
+                </td>
                 <td>{u.email}</td>
-                <td>{u.role}</td>
+                <td>
+                  {u.role}
+                  {/* A parent whose children have all gone still has an account
+                      that works. Say so, rather than leaving it to be noticed. */}
+                  {u.role === 'parent' && u.is_active && (
+                    <span className={u.active_children ? 'cab-muted' : 'cab-warn'}>
+                      {' · '}
+                      {u.active_children
+                        ? `${u.active_children} ${t('cab_active_children')}`
+                        : t('cab_no_active_children')}
+                    </span>
+                  )}
+                </td>
                 <td>
                   <div className="cab-btn-row">
                     <button type="button" className="cab-btn-ghost" onClick={() => toggleActive(u)}>
@@ -790,10 +819,14 @@ function StaffStudents() {
       <div className="cab-form cab-form-row cab-card">
         <label className="cab-wide">
           {t('cab_pick_student')}
+          {/* The list is ordered still-here first, and anyone who has left is
+              labelled — their card stays reachable for the records. */}
           <select value={picked} onChange={(e) => setPicked(e.target.value)}>
             <option value="">—</option>
             {(students.data || []).map((s) => (
-              <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+              <option key={s.id} value={s.id}>
+                {s.full_name || s.email}{s.is_active ? '' : ` · ${t('cab_left')}`}
+              </option>
             ))}
           </select>
         </label>

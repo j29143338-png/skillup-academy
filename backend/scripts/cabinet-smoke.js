@@ -294,6 +294,71 @@ async function main() {
       (await call("/cabinet/staff/log", { token: adminToken })).body.some((r) => r.action === "attendance.delete")
     );
 
+    console.log("\nA student leaves");
+    // Leaving is turning the account off. The person stops being able to sign
+    // in and drops off the teachers' screens; the money and the attendance stay,
+    // because those are the academy's records and not the student's.
+    const paymentsBefore = (await call(`/cabinet/staff/students/${other.id}`, { token: adminToken })).body;
+    await call("/cabinet/staff/payments", {
+      method: "POST",
+      token: adminToken,
+      body: { student_id: other.id, amount: 500000, paid_at: "2026-02-01", note: "before leaving" },
+    });
+    await call("/cabinet/staff/schedule", {
+      method: "POST",
+      token: adminToken,
+      body: { student_id: other.id, teacher_id: teacher.id, weekday: 2, time: "10:00", format: "individual" },
+    });
+    check("the leaver was on the teacher's schedule first",
+      (await call("/cabinet/teacher/schedule", { token: teacherToken })).body.slots.some(
+        (s) => s.student_id === other.id
+      ));
+
+    await call(`/cabinet/staff/users/${other.id}`, {
+      method: "PATCH",
+      token: adminToken,
+      body: { is_active: false },
+    });
+
+    check(
+      "a departed student can no longer sign in",
+      (await call("/auth/login", { method: "POST", body: { email: `student-b${SUFFIX}`, password: PASSWORD } })).status === 401
+    );
+    check(
+      "they disappear from the teacher's schedule",
+      !(await call("/cabinet/teacher/schedule", { token: teacherToken })).body.slots.some(
+        (s) => s.student_id === other.id
+      )
+    );
+    check(
+      "and from the teacher's student list",
+      !(await call("/cabinet/teacher/students", { token: teacherToken })).body.some((s) => s.id === other.id)
+    );
+    const after = (await call(`/cabinet/staff/students/${other.id}`, { token: adminToken })).body;
+    check("their payment history survives", after.payments.length === paymentsBefore.payments.length + 1);
+    check("their card is still reachable for the records", after.student.id === other.id);
+    check(
+      "the office can still list them under 'gone'",
+      (await call("/cabinet/staff/users?active=0", { token: adminToken })).body.some((u) => u.id === other.id)
+    );
+    check(
+      "and they are absent from the 'still here' list",
+      !(await call("/cabinet/staff/users?active=1", { token: adminToken })).body.some((u) => u.id === other.id)
+    );
+
+    // The parent of a departed student keeps a working account. The office is
+    // told, rather than left to discover it.
+    await call("/cabinet/staff/parent-links", {
+      method: "POST",
+      token: adminToken,
+      body: { parent_id: parent.id, student_id: other.id },
+    });
+    const withCounts = (await call("/cabinet/staff/users?role=parent", { token: adminToken })).body;
+    check(
+      "a parent is shown how many of their children are still here",
+      withCounts.find((p) => p.id === parent.id)?.active_children === 0
+    );
+
     console.log("\nCatalogue panel");
     // The older /admin panel now accepts a cabinet session, which is what lets
     // the shared ADMIN_PASSWORD be deleted entirely.

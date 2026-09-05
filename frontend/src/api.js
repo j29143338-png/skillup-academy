@@ -165,7 +165,14 @@ export const gradeHomework  = (id, data) => authPost(`/cabinet/teacher/homework/
 export const markAttendance = (data) => authPost('/cabinet/teacher/attendance', data);
 
 // Admin and owner
-export const getStaffUsers   = (role) => authGet(role ? `/cabinet/staff/users?role=${role}` : '/cabinet/staff/users');
+// active: '1' still here, '0' gone, undefined for everyone.
+export const getStaffUsers = (role, active) => {
+  const query = [
+    role ? `role=${role}` : null,
+    active ? `active=${active}` : null,
+  ].filter(Boolean).join('&');
+  return authGet(query ? `/cabinet/staff/users?${query}` : '/cabinet/staff/users');
+};
 export const createStaffUser = (data) => authPost('/cabinet/staff/users', data);
 export const updateStaffUser = (id, data) => authPatch(`/cabinet/staff/users/${id}`, data);
 export const setUserPassword = (id, password) => authPost(`/cabinet/staff/users/${id}/password`, { password });

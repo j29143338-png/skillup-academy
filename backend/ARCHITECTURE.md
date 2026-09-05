@@ -82,6 +82,32 @@ Offline classes, lesson transfers/reschedules, recalculations/refund logic beyon
 - **One lesson per student per day.** `attendance` is unique on `(student_id, lesson_date)`, which is what stops a correction from charging twice. A student sitting two lessons on one date would need that constraint reconsidered.
 - **The old `/admin` panel still exists** with its single shared password, and still owns the public catalogue (courses, prices, teachers, reviews). The cabinets do not replace it; folding it into the owner cabinet is a separate piece of work.
 
+## When somebody leaves
+
+There is no way to delete a person, on purpose. Leaving is turning the account
+off (`is_active = false`), and that is the whole flow:
+
+- they can no longer sign in, and any session they hold stops working at once;
+- they drop off the teachers' schedules and student lists, because an inactive
+  account is somebody who no longer comes;
+- payments, attendance, contracts and packages stay exactly where they are —
+  those are the academy's records, not the student's, and losing them when
+  somebody leaves would quietly destroy the accounts;
+- their card stays reachable from Students, and the People tab can list only
+  who is still here, only who has gone, or everyone;
+- turning the account back on returns them to every list with their history
+  intact, which is what a returning student should get.
+
+A parent whose children have all left keeps a working account, so the People
+tab shows each parent how many of their children are still here and marks the
+ones with none. Deactivating them is left to the office rather than done
+automatically: a second child may be about to enrol.
+
+Because nothing is deleted, storage only grows. It is not close to mattering:
+around 215 KB per student per year, most of it homework text, against Neon's
+512 MB — roughly 200 students for a decade. If it ever does, export the old
+years and remove them, in that order.
+
 ## Running it without a developer
 
 Everything the academy does day to day is a screen, not a code change:

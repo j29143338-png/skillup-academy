@@ -417,9 +417,12 @@ function cabinetRouter({ pool, rateLimit, clean }) {
 
   router.get("/cabinet/teacher/schedule", ...asTeacher, async (req, res) => {
     const { rows } = await pool.query(
+      // Students who have left keep their rows for the record, but they must
+      // stop appearing on a teacher's working screens: an inactive account is
+      // somebody who no longer comes.
       `SELECT s.id, s.weekday, s.time, s.format, u.id AS student_id, u.full_name AS student_name
          FROM schedule_slots s JOIN users u ON u.id = s.student_id
-        WHERE s.teacher_id = $1 ORDER BY s.weekday, s.time`,
+        WHERE s.teacher_id = $1 AND u.is_active ORDER BY s.weekday, s.time`,
       [req.user.id]
     );
     res.json({ slots: rows, reschedule_allowed: false });
@@ -432,7 +435,7 @@ function cabinetRouter({ pool, rateLimit, clean }) {
                        ORDER BY u.full_name) FILTER (WHERE u.id IS NOT NULL), '[]') AS students
          FROM groups g
          LEFT JOIN group_members gm ON gm.group_id = g.id
-         LEFT JOIN users u ON u.id = gm.student_id
+         LEFT JOIN users u ON u.id = gm.student_id AND u.is_active
         WHERE g.teacher_id = $1
         GROUP BY g.id ORDER BY g.name`,
       [req.user.id]
@@ -447,7 +450,7 @@ function cabinetRouter({ pool, rateLimit, clean }) {
          LEFT JOIN group_members gm ON gm.student_id = u.id
          LEFT JOIN groups g ON g.id = gm.group_id
          LEFT JOIN schedule_slots s ON s.student_id = u.id
-        WHERE u.role = 'student' AND (g.teacher_id = $1 OR s.teacher_id = $1)
+        WHERE u.role = 'student' AND u.is_active AND (g.teacher_id = $1 OR s.teacher_id = $1)
         ORDER BY u.full_name`,
       [req.user.id]
     );
@@ -605,15 +608,31 @@ function cabinetRouter({ pool, rateLimit, clean }) {
 
   router.get("/cabinet/staff/users", ...asStaff, async (req, res) => {
     const role = clean(req.query.role, 20);
+    const active = clean(req.query.active, 5);
     const params = [];
-    let where = "";
+    const conditions = [];
     if (ROLES.includes(role)) {
       params.push(role);
-      where = "WHERE role = $1";
+      conditions.push(`u.role = $${params.length}`);
     }
+    // People leave. Their rows stay — payments and attendance are the academy's
+    // records, not the student's — but the working lists have to be able to
+    // show only who is still here, or after a few years they are unusable.
+    if (active === "1" || active === "0") conditions.push(`u.is_active = ${active === "1"}`);
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
     const { rows } = await pool.query(
-      `SELECT id, email, role, full_name, is_active, created_at FROM users ${where}
-        ORDER BY role, full_name NULLS LAST, id`,
+      `SELECT u.id, u.email, u.role, u.full_name, u.is_active, u.created_at,
+              COALESCE(c.n, 0)::int AS active_children
+         FROM users u
+         LEFT JOIN (
+           SELECT l.parent_id, COUNT(*) AS n
+             FROM parent_links l JOIN users s ON s.id = l.student_id
+            WHERE s.is_active
+            GROUP BY l.parent_id
+         ) c ON c.parent_id = u.id
+         ${where}
+        ORDER BY u.is_active DESC, u.role, u.full_name NULLS LAST, u.id`,
       params
     );
     res.json(rows);

@@ -364,6 +364,16 @@ export const translations = {
     cab_new_account: "Account created. Hand these over now — the password is stored one-way and cannot be read back later.",
     cab_password_note: "Passwords cannot be looked up afterwards, by anyone. If one is lost, set a new one here.",
     cab_account_for: "Account for",
+
+    // Leavers
+    cab_filter_all: "Everyone",
+    cab_filter_active: "Still here",
+    cab_filter_left: "Gone",
+    cab_left: "gone",
+    cab_active_children: "children here",
+    cab_no_active_children: "no children here any more",
+    cab_leaving_note: "Turning an account off is how someone leaves: they can no longer sign in and they drop off the teachers' lists, while payments, attendance and contracts stay on the record. Nothing is ever deleted, so a returning student picks up where they left off.",
+    cab_parent_orphan_note: "Parents with no children here any more are worth turning off too.",
   },
 
   ru: {
@@ -714,6 +724,16 @@ export const translations = {
     cab_new_account: "Аккаунт создан. Передайте данные сейчас — пароль хранится необратимо и посмотреть его потом не получится.",
     cab_password_note: "Посмотреть пароль позже нельзя никому. Если он потерян — задайте здесь новый.",
     cab_account_for: "Аккаунт для",
+
+    // Ушедшие
+    cab_filter_all: "Все",
+    cab_filter_active: "Занимаются",
+    cab_filter_left: "Ушли",
+    cab_left: "ушёл",
+    cab_active_children: "детей занимается",
+    cab_no_active_children: "дети больше не занимаются",
+    cab_leaving_note: "Уход оформляется отключением аккаунта: человек больше не может войти и пропадает из списков преподавателей, а оплаты, посещаемость и договоры остаются в отчётности. Ничего не удаляется — если ученик вернётся, всё на месте.",
+    cab_parent_orphan_note: "Родителей, у которых больше никто не занимается, тоже стоит отключить.",
   },
 
   uz: {
@@ -1062,6 +1082,16 @@ export const translations = {
     cab_new_account: "Hisob yaratildi. Ma‘lumotlarni hozir bering — parol qaytarib bo‘lmaydigan tarzda saqlanadi va keyin ko‘rib bo‘lmaydi.",
     cab_password_note: "Parolni keyinchalik hech kim ko‘ra olmaydi. Yo‘qolgan bo‘lsa — shu yerda yangisini belgilang.",
     cab_account_for: "Hisob egasi",
+
+    // Ketganlar
+    cab_filter_all: "Hammasi",
+    cab_filter_active: "O‘qiyapti",
+    cab_filter_left: "Ketgan",
+    cab_left: "ketgan",
+    cab_active_children: "farzandi o‘qiydi",
+    cab_no_active_children: "farzandlari endi o‘qimaydi",
+    cab_leaving_note: "Ketish hisobni o‘chirish orqali rasmiylashtiriladi: odam kira olmaydi va o‘qituvchilar ro‘yxatidan chiqadi, to‘lovlar, davomat va shartnomalar esa hisobotda qoladi. Hech narsa o‘chirilmaydi — o‘quvchi qaytsa, hammasi joyida.",
+    cab_parent_orphan_note: "Farzandi endi o‘qimaydigan ota-onalarni ham o‘chirib qo‘ygan ma‘qul.",
   }
 };
 
