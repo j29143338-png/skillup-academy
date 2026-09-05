@@ -444,6 +444,69 @@ async function main() {
       (await call("/admin/applications")).status === 401
     );
 
+    console.log("\nThe owner can do everything an admin can");
+    // The owner is not a supervisor who has to fetch an admin. When one is off
+    // sick the other has to be able to take the desk, so this asserts parity
+    // rather than trusting that both roles happen to be in the same list.
+    const ownerStudent = (await call("/cabinet/staff/users", {
+      method: "POST",
+      token: ownerToken,
+      body: { email: `student-c${SUFFIX}`, password: PASSWORD, role: "student", full_name: "Owner's intake" },
+    })).body;
+    check("the owner can create a student", Boolean(ownerStudent.id));
+
+    const ownerContract = (await call("/cabinet/staff/contracts", {
+      method: "POST",
+      token: ownerToken,
+      body: { student_id: ownerStudent.id, contract_start: "2026-03-01" },
+    })).body;
+    check("enrol them on a contract", String(ownerContract.contract_end).startsWith("2027-03-01"));
+    check(
+      "give them a package",
+      (await call("/cabinet/staff/packages", {
+        method: "POST",
+        token: ownerToken,
+        body: { student_id: ownerStudent.id, lessons_paid: 12 },
+      })).body.lessons_paid === 12
+    );
+    check(
+      "put them on the timetable",
+      (await call("/cabinet/staff/schedule", {
+        method: "POST",
+        token: ownerToken,
+        body: { student_id: ownerStudent.id, teacher_id: teacher.id, weekday: 4, time: "12:00", format: "individual" },
+      })).status === 200
+    );
+    check(
+      "take a payment",
+      (await call("/cabinet/staff/payments", {
+        method: "POST",
+        token: ownerToken,
+        body: { student_id: ownerStudent.id, amount: 900000, paid_at: "2026-03-02" },
+      })).status === 200
+    );
+    check(
+      "open their card",
+      (await call(`/cabinet/staff/students/${ownerStudent.id}`, { token: ownerToken })).body.student.id === ownerStudent.id
+    );
+    check(
+      "read the applications list",
+      (await call("/admin/applications", { token: ownerToken })).status === 200
+    );
+    check(
+      "move an application along",
+      (await call(`/admin/applications/${mine.id}`, {
+        method: "PATCH",
+        token: ownerToken,
+        body: { status: "declined" },
+      })).body.status === "declined"
+    );
+    check(
+      "and see the analytics an admin cannot",
+      (await call("/cabinet/staff/analytics", { token: ownerToken })).status === 200 &&
+        (await call("/cabinet/staff/analytics", { token: adminToken })).status === 403
+    );
+
     console.log("\nSessions");
     check("logout kills the token",
       (await call("/auth/logout", { method: "POST", token: studentToken })).status === 200 &&
