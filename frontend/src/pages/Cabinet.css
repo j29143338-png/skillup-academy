@@ -133,3 +133,14 @@
   .cab-header h1 { font-size: 28px; }
   .cab-form-row { flex-direction: column; align-items: stretch; }
 }
+
+/* A labelled item with its own remove button. Used all over the office screens,
+   where almost every list entry needs to be correctable. */
+.cab-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--gray-200);
+  font-size: 14px; color: var(--navy-dark);
+}
+.cab-row:last-of-type { border-bottom: none; }
+.cab-row h3 { margin-bottom: 0; }
+.cab-row button { padding: 6px 12px; font-size: 13px; }

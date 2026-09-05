@@ -22,6 +22,7 @@ confusing way.
 | Homework answers | `POST /cabinet/homework/:id/submit` (student only) |
 | Teacher: schedule, groups, students, homework, grading, attendance, earnings | `/cabinet/teacher/*` |
 | Office: people, contracts, packages, schedule, payments, groups, parent links, teacher rates, audit log | `/cabinet/staff/*` |
+| Office corrections: remove a payment, package, contract, parent link or a wrongly marked lesson | `DELETE /cabinet/staff/*` |
 | Owner-only analytics | `GET /cabinet/staff/analytics` |
 
 The first owner cannot be created through the UI, because nobody is signed in
@@ -77,6 +78,25 @@ Offline classes, lesson transfers/reschedules, recalculations/refund logic beyon
 
 ## Known gaps
 
-- **Password recovery cannot email anyone.** No mail provider is configured, so `POST /auth/password/forgot` mints a code and writes it to the server log; the office passes it on, or resets the password directly from the people tab. Wire an SMTP provider before relying on self-serve recovery.
+- **Password recovery cannot email anyone.** No mail provider is configured, so `POST /auth/password/forgot` mints a code and writes it to the server log. In practice nobody needs it: the office sets a new password straight from the people tab ("Set password"), which is why that button exists. Wire an SMTP provider only if self-serve recovery is actually wanted.
 - **One lesson per student per day.** `attendance` is unique on `(student_id, lesson_date)`, which is what stops a correction from charging twice. A student sitting two lessons on one date would need that constraint reconsidered.
 - **The old `/admin` panel still exists** with its single shared password, and still owns the public catalogue (courses, prices, teachers, reviews). The cabinets do not replace it; folding it into the owner cabinet is a separate piece of work.
+
+## Running it without a developer
+
+Everything the academy does day to day is a screen, not a code change:
+
+| Task | Where |
+|------|-------|
+| Add a student, parent, teacher or admin; disable an account; set someone's password | Cabinet → People |
+| Enrol: contract, lesson package, schedule, payments; fix a wrongly marked lesson; link a parent | Cabinet → Students, pick a person |
+| Groups, who teaches them, who is in them; teacher pay rates | Cabinet → Groups |
+| Courses, prices, teachers on the public site, reviews, applications | the older `/admin` panel |
+| Who did what, and when | Cabinet → Activity log |
+
+Code is only needed for a new *kind* of thing — another role, another field on a
+contract, a different pay rule. Adding rows of the kinds above never is.
+
+What still needs an eye occasionally, none of it urgent: the free Render
+instance sleeps after inactivity, Neon's free tier has a storage ceiling, and
+dependencies age. None of these require changing this code.

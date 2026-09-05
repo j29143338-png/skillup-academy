@@ -758,6 +758,38 @@ function cabinetRouter({ pool, rateLimit, clean }) {
     res.json(rows[0]);
   });
 
+  // The teacher endpoint only ever returns that teacher's own groups; the
+  // office needs to see all of them to move students around.
+  router.get("/cabinet/staff/groups", ...asStaff, async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT g.id, g.name, g.course_id, g.teacher_id, t.full_name AS teacher_name,
+              COALESCE(json_agg(json_build_object('id', u.id, 'full_name', u.full_name)
+                       ORDER BY u.full_name) FILTER (WHERE u.id IS NOT NULL), '[]') AS students
+         FROM groups g
+         LEFT JOIN users t ON t.id = g.teacher_id
+         LEFT JOIN group_members gm ON gm.group_id = g.id
+         LEFT JOIN users u ON u.id = gm.student_id
+        GROUP BY g.id, t.full_name ORDER BY g.name`
+    );
+    res.json(rows);
+  });
+
+  router.delete("/cabinet/staff/groups/:id", ...asStaff, async (req, res) => {
+    const { rowCount } = await pool.query("DELETE FROM groups WHERE id = $1", [int(req.params.id)]);
+    if (!rowCount) return res.status(404).json({ detail: "Group not found" });
+    await log(req.user.id, "group.delete", `group:${req.params.id}`);
+    res.json({ success: true });
+  });
+
+  // Rates are read as well as written now that the office edits them in the UI.
+  router.get("/cabinet/staff/teacher-rates", ...asStaff, async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT r.teacher_id, r.per_lesson, r.tax_percent, r.currency, u.full_name
+         FROM teacher_rates r JOIN users u ON u.id = r.teacher_id ORDER BY u.full_name`
+    );
+    res.json(rows);
+  });
+
   router.post("/cabinet/staff/groups", ...asStaff, async (req, res) => {
     const name = clean(req.body?.name, 200);
     const teacherId = int(req.body?.teacher_id);
@@ -832,7 +864,8 @@ function cabinetRouter({ pool, rateLimit, clean }) {
   // One student's full picture, for the office. Same numbers the student sees.
   router.get("/cabinet/staff/students/:id", ...asStaff, async (req, res) => {
     const id = int(req.params.id);
-    const [user, contract, packages, slots, payments, attendance, parents] = await Promise.all([
+    const [user, contract, packages, slots, payments, attendance, parents, records, groups] =
+      await Promise.all([
       pool.query("SELECT id, email, full_name, is_active FROM users WHERE id = $1 AND role = 'student'", [id]),
       pool.query("SELECT * FROM contracts WHERE student_id = $1 ORDER BY contract_end DESC", [id]),
       pool.query("SELECT * FROM lesson_packages WHERE student_id = $1 ORDER BY purchased_at DESC", [id]),
@@ -854,6 +887,19 @@ function cabinetRouter({ pool, rateLimit, clean }) {
            JOIN users u ON u.id = l.parent_id WHERE l.student_id = $1`,
         [id]
       ),
+      // The individual records, not just the totals: the office needs to see
+      // which lesson was marked wrong before it can take it back off.
+      pool.query(
+        `SELECT a.id, a.lesson_date, a.status, a.comment, t.full_name AS teacher_name
+           FROM attendance a LEFT JOIN users t ON t.id = a.teacher_id
+          WHERE a.student_id = $1 ORDER BY a.lesson_date DESC LIMIT 100`,
+        [id]
+      ),
+      pool.query(
+        `SELECT g.id, g.name FROM group_members gm JOIN groups g ON g.id = gm.group_id
+          WHERE gm.student_id = $1 ORDER BY g.name`,
+        [id]
+      ),
     ]);
     if (!user.rows[0]) return res.status(404).json({ detail: "Student not found" });
     res.json({
@@ -865,8 +911,72 @@ function cabinetRouter({ pool, rateLimit, clean }) {
       schedule: slots.rows,
       payments: payments.rows,
       attendance: attendance.rows[0],
+      attendance_records: records.rows,
       parents: parents.rows,
+      groups: groups.rows,
     });
+  });
+
+  // Corrections. Money and enrolment get typed in by hand under time pressure,
+  // so every one of them needs an undo that does not involve a developer.
+  // Each is logged, and the log is append-only, so an undo leaves a trail.
+  const removable = {
+    payments: "payment.delete",
+    lesson_packages: "package.delete",
+    contracts: "contract.delete",
+  };
+  for (const [table, action] of Object.entries(removable)) {
+    router.delete(`/cabinet/staff/${table}/:id`, ...asStaff, async (req, res) => {
+      const { rowCount } = await pool.query(`DELETE FROM ${table} WHERE id = $1`, [int(req.params.id)]);
+      if (!rowCount) return res.status(404).json({ detail: "Not found" });
+      await log(req.user.id, action, `${table}:${req.params.id}`);
+      res.json({ success: true });
+    });
+  }
+
+  router.delete("/cabinet/staff/parent-links/:parentId/:studentId", ...asStaff, async (req, res) => {
+    const { rowCount } = await pool.query(
+      "DELETE FROM parent_links WHERE parent_id = $1 AND student_id = $2",
+      [int(req.params.parentId), int(req.params.studentId)]
+    );
+    if (!rowCount) return res.status(404).json({ detail: "Link not found" });
+    await log(req.user.id, "parent_link.delete", `parent:${req.params.parentId} student:${req.params.studentId}`);
+    res.json({ success: true });
+  });
+
+  // Attendance is the one thing the office should be able to fix without the
+  // teacher: a lesson marked on the wrong student has to come back off the
+  // package, or the balance is wrong forever.
+  router.delete("/cabinet/staff/attendance/:id", ...asStaff, async (req, res) => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query("DELETE FROM attendance WHERE id = $1 RETURNING student_id", [
+        int(req.params.id),
+      ]);
+      if (!rows[0]) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ detail: "Not found" });
+      }
+      // Give the lesson back to the most recently spent package.
+      await client.query(
+        `UPDATE lesson_packages
+            SET lessons_used = lessons_used - 1
+          WHERE id = (SELECT id FROM lesson_packages
+                       WHERE student_id = $1 AND lessons_used > 0
+                       ORDER BY purchased_at DESC, id DESC LIMIT 1)`,
+        [rows[0].student_id]
+      );
+      await client.query("COMMIT");
+      await log(req.user.id, "attendance.delete", `attendance:${req.params.id}`);
+      res.json({ success: true });
+    } catch (e) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error("attendance.delete failed:", e.message);
+      res.status(500).json({ detail: "Could not remove the record" });
+    } finally {
+      client.release();
+    }
   });
 
   router.get("/cabinet/staff/log", ...asStaff, async (req, res) => {

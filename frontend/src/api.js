@@ -181,3 +181,18 @@ export const linkParent      = (data) => authPost('/cabinet/staff/parent-links',
 export const setTeacherRate  = (data) => authPost('/cabinet/staff/teacher-rate', data);
 export const getActionLog    = () => authGet('/cabinet/staff/log');
 export const getAnalytics    = () => authGet('/cabinet/staff/analytics');
+
+// Office: the rest of what the staff cabinet drives. Every day-to-day action
+// has a matching call here, so enrolling a student, taking a payment or fixing
+// a mistake never needs anyone to touch the code.
+export const getStaffGroups   = () => authGet('/cabinet/staff/groups');
+export const deleteGroup      = (id) => authDelete(`/cabinet/staff/groups/${id}`);
+export const removeGroupMember = (groupId, studentId) =>
+  authDelete(`/cabinet/staff/groups/${groupId}/members/${studentId}`);
+export const getTeacherRates  = () => authGet('/cabinet/staff/teacher-rates');
+export const unlinkParent     = (parentId, studentId) =>
+  authDelete(`/cabinet/staff/parent-links/${parentId}/${studentId}`);
+export const deletePayment    = (id) => authDelete(`/cabinet/staff/payments/${id}`);
+export const deletePackage    = (id) => authDelete(`/cabinet/staff/lesson_packages/${id}`);
+export const deleteContract   = (id) => authDelete(`/cabinet/staff/contracts/${id}`);
+export const deleteAttendance = (id) => authDelete(`/cabinet/staff/attendance/${id}`);

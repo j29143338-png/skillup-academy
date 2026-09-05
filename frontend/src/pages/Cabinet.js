@@ -514,6 +514,24 @@ function StaffCabinet({ tab }) {
 
   const [form, setForm] = useState({ email: '', full_name: '', role: 'student', password: '' });
   const [error, setError] = useState('');
+  // Which account is having its password replaced, and the new value. Kept
+  // inline rather than in a browser prompt so it behaves like the rest of the
+  // page and the field can be a real password input.
+  const [pwFor, setPwFor] = useState(null);
+  const [newPw, setNewPw] = useState('');
+  const [pwDone, setPwDone] = useState('');
+
+  const resetPassword = (u) => { setPwFor(u); setNewPw(''); setPwDone(''); setError(''); };
+
+  const savePassword = async () => {
+    setError('');
+    try {
+      await api.setUserPassword(pwFor.id, newPw);
+      setPwDone(`${t('cab_saved')}: ${pwFor.full_name || pwFor.email}`);
+      setPwFor(null);
+      setNewPw('');
+    } catch (err) { setError(err.message); }
+  };
 
   const addUser = async (e) => {
     e.preventDefault();
@@ -537,6 +555,20 @@ function StaffCabinet({ tab }) {
     return (
       <Panel state={users}>
         {error && <p className="cab-error">{error}</p>}
+        {pwDone && <p className="cab-note">{pwDone}</p>}
+
+        {pwFor && (
+          <div className="cab-form cab-form-row cab-card">
+            <label className="cab-wide">
+              {t('cab_set_password')} — {pwFor.full_name || pwFor.email}
+              <input type="password" minLength={8} autoComplete="new-password"
+                     value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+            </label>
+            <button type="button" disabled={newPw.length < 8} onClick={savePassword}>{t('cab_save')}</button>
+            <button type="button" className="cab-btn-ghost" onClick={() => setPwFor(null)}>{t('cab_delete')}</button>
+          </div>
+        )}
+
         <form className="cab-form cab-form-row cab-card" onSubmit={addUser}>
           <label>
             {t('cab_email')}
@@ -578,9 +610,16 @@ function StaffCabinet({ tab }) {
                 <td>{u.email}</td>
                 <td>{u.role}</td>
                 <td>
-                  <button type="button" className="cab-btn-ghost" onClick={() => toggleActive(u)}>
-                    {u.is_active ? 'on' : 'off'}
-                  </button>
+                  <div className="cab-btn-row">
+                    <button type="button" className="cab-btn-ghost" onClick={() => toggleActive(u)}>
+                      {u.is_active ? 'on' : 'off'}
+                    </button>
+                    {/* Password recovery cannot send email, so the office has
+                        to be able to hand someone a new one on the spot. */}
+                    <button type="button" className="cab-btn-ghost" onClick={() => resetPassword(u)}>
+                      {t('cab_set_password')}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -589,6 +628,9 @@ function StaffCabinet({ tab }) {
       </Panel>
     );
   }
+
+  if (tab === 'students') return <StaffStudents />;
+  if (tab === 'groups') return <StaffGroups />;
 
   if (tab === 'log') {
     const rows = log.data || [];
@@ -641,13 +683,419 @@ function StaffCabinet({ tab }) {
   return <PasswordTab />;
 }
 
+// ── Office: one student's whole enrolment ───────────────────────────────────
+// Everything the front desk does day to day lives on this screen: contract,
+// package, schedule, payments, attendance corrections, parents. Without it the
+// only way to enrol somebody would be to call the API by hand.
+function StaffStudents() {
+  const { t, lang } = useLang();
+  const students = useAsync(() => api.getStaffUsers('student'), []);
+  const teachers = useAsync(() => api.getStaffUsers('teacher'), []);
+  const parents = useAsync(() => api.getStaffUsers('parent'), []);
+  const [picked, setPicked] = useState('');
+  const [error, setError] = useState('');
+  const detail = useAsync(
+    () => (picked ? api.getStaffStudent(picked) : Promise.resolve(null)),
+    [picked]
+  );
+
+  // Forms are plain local state; each one clears itself once the server agrees.
+  const [contract, setContract] = useState({ contract_start: '' });
+  const [pkg, setPkg] = useState({ lessons_paid: 12 });
+  const [slot, setSlot] = useState({ weekday: '1', time: '', format: 'individual', teacher_id: '' });
+  const [payment, setPayment] = useState({ amount: '', paid_at: '', note: '' });
+  const [parentId, setParentId] = useState('');
+
+  const run = async (fn, after) => {
+    setError('');
+    try {
+      await fn();
+      if (after) after();
+      detail.reload();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const d = detail.data;
+
+  return (
+    <>
+      {error && <p className="cab-error">{error}</p>}
+
+      <div className="cab-form cab-form-row cab-card">
+        <label className="cab-wide">
+          {t('cab_pick_student')}
+          <select value={picked} onChange={(e) => setPicked(e.target.value)}>
+            <option value="">—</option>
+            {(students.data || []).map((s) => (
+              <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {!picked && <p className="cab-muted">{t('cab_no_student_picked')}</p>}
+
+      {picked && (
+        <Panel state={detail} empty={!d}>
+          {d && (
+            <>
+              <div className="cab-stats">
+                <Stat label={t('cab_lessons_left')} value={d.package.lessons_left} />
+                <Stat label={t('cab_lessons_used')} value={d.package.lessons_used} />
+                <Stat label={t('cab_present')} value={d.attendance.present} />
+                <Stat label={t('cab_missed')} value={d.attendance.missed} />
+              </div>
+
+              {/* Contract */}
+              <div className="cab-card">
+                <h3>{t('cab_contract')}</h3>
+                <p className="cab-muted">{t('cab_contract_hint')}</p>
+                {d.contracts.map((c) => (
+                  <div className="cab-row" key={c.id}>
+                    <span>{asDate(c.contract_start)} — {asDate(c.contract_end)}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.deleteContract(c.id))}>{t('cab_delete')}</button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label>
+                    {t('cab_start')}
+                    <input type="date" value={contract.contract_start}
+                           onChange={(e) => setContract({ contract_start: e.target.value })} />
+                  </label>
+                  <button type="button" disabled={!contract.contract_start}
+                          onClick={() => run(
+                            () => api.createContract({ student_id: Number(picked), ...contract }),
+                            () => setContract({ contract_start: '' })
+                          )}>{t('cab_add')}</button>
+                </div>
+              </div>
+
+              {/* Package */}
+              <div className="cab-card">
+                <h3>{t('cab_package')}</h3>
+                <p className="cab-muted">{t('cab_package_hint')}</p>
+                {d.packages.map((p) => (
+                  <div className="cab-row" key={p.id}>
+                    <span>{p.lessons_used} / {p.lessons_paid} · {asDate(p.purchased_at)}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.deletePackage(p.id))}>{t('cab_delete')}</button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label>
+                    {t('cab_lessons_count')}
+                    <input type="number" min={1} value={pkg.lessons_paid}
+                           onChange={(e) => setPkg({ lessons_paid: e.target.value })} />
+                  </label>
+                  <button type="button"
+                          onClick={() => run(
+                            () => api.createPackage({
+                              student_id: Number(picked),
+                              lessons_paid: Number(pkg.lessons_paid),
+                              contract_id: d.contracts[0]?.id ?? null,
+                            }),
+                            () => setPkg({ lessons_paid: 12 })
+                          )}>{t('cab_add')}</button>
+                </div>
+              </div>
+
+              {/* Schedule */}
+              <div className="cab-card">
+                <h3>{t('cab_tab_schedule')}</h3>
+                <p className="cab-note">{t('cab_no_reschedule')}</p>
+                {d.schedule.map((s) => (
+                  <div className="cab-row" key={s.id}>
+                    <span>{weekdayName(lang, s.weekday)}, {s.time} · {s.format} · {s.teacher_name || '—'}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.deleteSlot(s.id))}>{t('cab_delete')}</button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label>
+                    {t('cab_weekday')}
+                    <select value={slot.weekday} onChange={(e) => setSlot({ ...slot, weekday: e.target.value })}>
+                      {[1, 2, 3, 4, 5, 6, 0].map((n) => (
+                        <option key={n} value={n}>{weekdayName(lang, n)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t('cab_time')}
+                    <input type="time" value={slot.time}
+                           onChange={(e) => setSlot({ ...slot, time: e.target.value })} />
+                  </label>
+                  <label>
+                    {t('cab_format')}
+                    <select value={slot.format} onChange={(e) => setSlot({ ...slot, format: e.target.value })}>
+                      <option value="individual">{t('cab_format_individual')}</option>
+                      <option value="group">{t('cab_format_group')}</option>
+                    </select>
+                  </label>
+                  <label>
+                    {t('cab_teacher')}
+                    <select value={slot.teacher_id}
+                            onChange={(e) => setSlot({ ...slot, teacher_id: e.target.value })}>
+                      <option value="">—</option>
+                      {(teachers.data || []).map((x) => (
+                        <option key={x.id} value={x.id}>{x.full_name || x.email}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" disabled={!slot.time}
+                          onClick={() => run(
+                            () => api.createSlot({
+                              student_id: Number(picked),
+                              teacher_id: slot.teacher_id ? Number(slot.teacher_id) : null,
+                              weekday: Number(slot.weekday),
+                              time: slot.time,
+                              format: slot.format,
+                            }),
+                            () => setSlot({ ...slot, time: '' })
+                          )}>{t('cab_add')}</button>
+                </div>
+              </div>
+
+              {/* Payments */}
+              <div className="cab-card">
+                <h3>{t('cab_tab_payments')}</h3>
+                {d.payments.map((p) => (
+                  <div className="cab-row" key={p.id}>
+                    <span>{asDate(p.paid_at)} · {money(p.amount, p.currency)} · {p.note || '—'}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.deletePayment(p.id))}>{t('cab_delete')}</button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label>
+                    {t('cab_amount')}
+                    <input type="number" min={1} value={payment.amount}
+                           onChange={(e) => setPayment({ ...payment, amount: e.target.value })} />
+                  </label>
+                  <label>
+                    {t('cab_date')}
+                    <input type="date" value={payment.paid_at}
+                           onChange={(e) => setPayment({ ...payment, paid_at: e.target.value })} />
+                  </label>
+                  <label className="cab-wide">
+                    {t('cab_note')}
+                    <input type="text" value={payment.note}
+                           onChange={(e) => setPayment({ ...payment, note: e.target.value })} />
+                  </label>
+                  <button type="button" disabled={!payment.amount || !payment.paid_at}
+                          onClick={() => run(
+                            () => api.createPayment({
+                              student_id: Number(picked),
+                              amount: Number(payment.amount),
+                              paid_at: payment.paid_at,
+                              note: payment.note,
+                            }),
+                            () => setPayment({ amount: '', paid_at: '', note: '' })
+                          )}>{t('cab_add')}</button>
+                </div>
+              </div>
+
+              {/* Attendance corrections */}
+              <div className="cab-card">
+                <h3>{t('cab_tab_attendance')}</h3>
+                <p className="cab-muted">{t('cab_mark_note')}</p>
+                {d.attendance_records.length === 0 && <p className="cab-muted">{t('cab_none')}</p>}
+                {d.attendance_records.map((r) => (
+                  <div className="cab-row" key={r.id}>
+                    <span className={r.status === 'present' ? 'cab-ok' : 'cab-warn'}>
+                      {asDate(r.lesson_date)} · {r.status === 'present' ? t('cab_present') : t('cab_missed')}
+                      {r.teacher_name ? ` · ${r.teacher_name}` : ''}
+                    </span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.deleteAttendance(r.id))}>{t('cab_delete')}</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Parents */}
+              <div className="cab-card">
+                <h3>{t('cab_parents')}</h3>
+                {d.parents.map((p) => (
+                  <div className="cab-row" key={p.id}>
+                    <span>{p.full_name || p.email}</span>
+                    <button type="button" className="cab-btn-ghost"
+                            onClick={() => run(() => api.unlinkParent(p.id, Number(picked)))}>
+                      {t('cab_delete')}
+                    </button>
+                  </div>
+                ))}
+                <div className="cab-form cab-form-row">
+                  <label className="cab-wide">
+                    {t('cab_link_parent')}
+                    <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+                      <option value="">—</option>
+                      {(parents.data || []).map((p) => (
+                        <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" disabled={!parentId}
+                          onClick={() => run(
+                            () => api.linkParent({ parent_id: Number(parentId), student_id: Number(picked) }),
+                            () => setParentId('')
+                          )}>{t('cab_add')}</button>
+                </div>
+              </div>
+
+              {d.groups.length > 0 && (
+                <div className="cab-card">
+                  <h3>{t('cab_tab_groups')}</h3>
+                  <ul className="cab-list">{d.groups.map((g) => <li key={g.id}>{g.name}</li>)}</ul>
+                </div>
+              )}
+            </>
+          )}
+        </Panel>
+      )}
+    </>
+  );
+}
+
+// ── Office: groups and teacher pay ──────────────────────────────────────────
+function StaffGroups() {
+  const { t } = useLang();
+  const groups = useAsync(() => api.getStaffGroups(), []);
+  const teachers = useAsync(() => api.getStaffUsers('teacher'), []);
+  const students = useAsync(() => api.getStaffUsers('student'), []);
+  const rates = useAsync(() => api.getTeacherRates(), []);
+  const [form, setForm] = useState({ name: '', teacher_id: '' });
+  const [member, setMember] = useState({});
+  const [rate, setRate] = useState({ teacher_id: '', per_lesson: '', tax_percent: '' });
+  const [error, setError] = useState('');
+
+  const run = async (fn, after, reload) => {
+    setError('');
+    try {
+      await fn();
+      if (after) after();
+      (reload || groups.reload)();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <>
+      {error && <p className="cab-error">{error}</p>}
+
+      <div className="cab-form cab-form-row cab-card">
+        <label>
+          {t('cab_group_name')}
+          <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        </label>
+        <label>
+          {t('cab_teacher')}
+          <select value={form.teacher_id} onChange={(e) => setForm({ ...form, teacher_id: e.target.value })}>
+            <option value="">—</option>
+            {(teachers.data || []).map((x) => (
+              <option key={x.id} value={x.id}>{x.full_name || x.email}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" disabled={!form.name}
+                onClick={() => run(
+                  () => api.createGroup({
+                    name: form.name,
+                    teacher_id: form.teacher_id ? Number(form.teacher_id) : null,
+                  }),
+                  () => setForm({ name: '', teacher_id: '' })
+                )}>{t('cab_add')}</button>
+      </div>
+
+      <Panel state={groups}>
+        {(groups.data || []).map((g) => (
+          <div className="cab-card" key={g.id}>
+            <div className="cab-row">
+              <h3>{g.name} <span className="cab-muted">{g.teacher_name || '—'}</span></h3>
+              <button type="button" className="cab-btn-ghost"
+                      onClick={() => run(() => api.deleteGroup(g.id))}>{t('cab_delete')}</button>
+            </div>
+            {g.students.map((s) => (
+              <div className="cab-row" key={s.id}>
+                <span>{s.full_name}</span>
+                <button type="button" className="cab-btn-ghost"
+                        onClick={() => run(() => api.removeGroupMember(g.id, s.id))}>{t('cab_delete')}</button>
+              </div>
+            ))}
+            <div className="cab-form cab-form-row">
+              <label className="cab-wide">
+                {t('cab_add_member')}
+                <select value={member[g.id] || ''}
+                        onChange={(e) => setMember({ ...member, [g.id]: e.target.value })}>
+                  <option value="">—</option>
+                  {(students.data || []).map((s) => (
+                    <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" disabled={!member[g.id]}
+                      onClick={() => run(
+                        () => api.addGroupMember(g.id, Number(member[g.id])),
+                        () => setMember({ ...member, [g.id]: '' })
+                      )}>{t('cab_add')}</button>
+            </div>
+          </div>
+        ))}
+      </Panel>
+
+      <div className="cab-card">
+        <h3>{t('cab_rates')}</h3>
+        <p className="cab-muted">{t('cab_finance_net')}</p>
+        {(rates.data || []).map((r) => (
+          <div className="cab-row" key={r.teacher_id}>
+            <span>{r.full_name} · {money(r.per_lesson, r.currency)} · {Number(r.tax_percent)}%</span>
+          </div>
+        ))}
+        <div className="cab-form cab-form-row">
+          <label>
+            {t('cab_teacher')}
+            <select value={rate.teacher_id} onChange={(e) => setRate({ ...rate, teacher_id: e.target.value })}>
+              <option value="">—</option>
+              {(teachers.data || []).map((x) => (
+                <option key={x.id} value={x.id}>{x.full_name || x.email}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t('cab_rate_per_lesson')}
+            <input type="number" min={0} value={rate.per_lesson}
+                   onChange={(e) => setRate({ ...rate, per_lesson: e.target.value })} />
+          </label>
+          <label>
+            {t('cab_tax_percent')}
+            <input type="number" min={0} max={100} value={rate.tax_percent}
+                   onChange={(e) => setRate({ ...rate, tax_percent: e.target.value })} />
+          </label>
+          <button type="button" disabled={!rate.teacher_id || rate.per_lesson === '' || rate.tax_percent === ''}
+                  onClick={() => run(
+                    () => api.setTeacherRate({
+                      teacher_id: Number(rate.teacher_id),
+                      per_lesson: Number(rate.per_lesson),
+                      tax_percent: Number(rate.tax_percent),
+                    }),
+                    () => setRate({ teacher_id: '', per_lesson: '', tax_percent: '' }),
+                    rates.reload
+                  )}>{t('cab_save')}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Shell ───────────────────────────────────────────────────────────────────
 const TABS = {
   student: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
   parent: ['overview', 'schedule', 'homework', 'attendance', 'payments', 'password'],
   teacher: ['schedule', 'groups', 'students', 'homework', 'finance', 'password'],
-  admin: ['people', 'log', 'password'],
-  owner: ['people', 'log', 'analytics', 'password'],
+  admin: ['people', 'students', 'groups', 'log', 'password'],
+  owner: ['people', 'students', 'groups', 'log', 'analytics', 'password'],
 };
 
 export default function Cabinet() {

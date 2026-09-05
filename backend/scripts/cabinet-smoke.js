@@ -251,6 +251,49 @@ async function main() {
     check("earnings are net of withholding", finance.configured && finance.months[0].net === 88000,
       JSON.stringify(finance.months && finance.months[0]));
 
+    console.log("\nOffice screens");
+    const card = (await call(`/cabinet/staff/students/${student.id}`, { token: adminToken })).body;
+    check("student card carries the individual attendance records", card.attendance_records.length === 1);
+    check("student card lists the groups they are in", card.groups.some((g) => g.id === group.id));
+    check("student card keeps contract and package apart",
+      card.contract_term_months === 12 && card.package.package_size === 12);
+
+    const allGroups = (await call("/cabinet/staff/groups", { token: adminToken })).body;
+    check("office sees every group, not just one teacher's",
+      allGroups.some((g) => g.id === group.id && g.students.length === 1));
+    check("office can read teacher rates",
+      (await call("/cabinet/staff/teacher-rates", { token: adminToken })).body.some(
+        (r) => r.teacher_id === teacher.id
+      ));
+
+    console.log("\nCorrections");
+    const attendanceId = card.attendance_records[0].id;
+    check(
+      "removing a wrongly marked lesson puts it back on the package",
+      (await call(`/cabinet/staff/attendance/${attendanceId}`, { method: "DELETE", token: adminToken })).status === 200 &&
+        (await call("/cabinet/overview", { token: parentToken })).body.package.lessons_left === 12
+    );
+    check(
+      "a payment entered by mistake can be removed",
+      (await call(`/cabinet/staff/payments/${card.payments[0].id}`, { method: "DELETE", token: adminToken })).status === 200
+    );
+    check(
+      "a parent link can be undone",
+      (await call(`/cabinet/staff/parent-links/${parent.id}/${student.id}`, { method: "DELETE", token: adminToken })).status === 200
+    );
+    check(
+      "the unlinked parent loses access immediately",
+      (await call("/cabinet/overview", { token: parentToken })).status === 404
+    );
+    check(
+      "a student may NOT remove a payment",
+      (await call(`/cabinet/staff/payments/999999`, { method: "DELETE", token: studentToken })).status === 403
+    );
+    check(
+      "every correction is written to the log",
+      (await call("/cabinet/staff/log", { token: adminToken })).body.some((r) => r.action === "attendance.delete")
+    );
+
     console.log("\nSessions");
     check("logout kills the token",
       (await call("/auth/logout", { method: "POST", token: studentToken })).status === 200 &&
