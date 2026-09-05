@@ -93,6 +93,49 @@ function PasswordField({ label, value, onChange }) {
   );
 }
 
+// Decoration for the header, on the theme of what the academy actually sells:
+// a certificate with a sealed ribbon and a graduate's cap. Deliberately
+// wordless — naming IELTS or CSCA here would date the moment the course list
+// changes, and this has to keep working for years without anyone editing it.
+//
+// Purely ornamental: it sits behind the content, ignores the pointer, is
+// hidden from screen readers, and disappears on narrow screens where there is
+// no room to spare.
+function HeaderArt() {
+  return (
+    <svg className="cab-art" viewBox="0 0 280 180" aria-hidden="true" focusable="false">
+      <circle cx="214" cy="58" r="62" fill="var(--blue-light)" opacity="0.22" />
+      <circle cx="128" cy="128" r="34" fill="var(--orange)" opacity="0.16" />
+
+      {/* The certificate, tilted as if lying on a desk */}
+      <g transform="rotate(-7 150 90)">
+        <rect x="96" y="34" width="130" height="94" rx="8"
+              fill="var(--white)" opacity="0.14" stroke="var(--white)" strokeOpacity="0.35" strokeWidth="2" />
+        <g stroke="var(--white)" strokeOpacity="0.4" strokeWidth="3" strokeLinecap="round">
+          <path d="M112 58 H186" />
+          <path d="M112 72 H210" />
+          <path d="M112 86 H196" />
+          <path d="M112 100 H170" />
+        </g>
+        {/* Seal and ribbon */}
+        <circle cx="200" cy="106" r="15" fill="var(--orange)" opacity="0.85" />
+        <circle cx="200" cy="106" r="8" fill="none" stroke="var(--white)" strokeOpacity="0.6" strokeWidth="2" />
+        <path d="M193 118 L190 136 L200 130 L210 136 L207 118 Z"
+              fill="var(--orange-light)" opacity="0.8" />
+      </g>
+
+      {/* Graduate's cap */}
+      <g transform="translate(24 96)" opacity="0.7">
+        <path d="M0 14 L28 2 L56 14 L28 26 Z" fill="var(--white)" fillOpacity="0.35" />
+        <path d="M12 20 V34 C12 40 44 40 44 34 V20" fill="none"
+              stroke="var(--white)" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" />
+        <path d="M56 14 V32" stroke="var(--orange-light)" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="56" cy="35" r="4" fill="var(--orange-light)" />
+      </g>
+    </svg>
+  );
+}
+
 function Stat({ label, value, hint }) {
   return (
     <div className="cab-stat">
@@ -1653,6 +1696,7 @@ export default function Cabinet() {
   return (
     <div className="cab-page">
       <header className="cab-header">
+        <HeaderArt />
         <div className="container cab-header-inner">
           <div>
             <h1>{t('cab_hello', { name: user.full_name || user.email })}</h1>
